@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Requirements Document - DS-Star</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .nav-breadcrumb {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        
+        .nav-breadcrumb a {
+            color: white;
+            text-decoration: none;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+        }
+        
+        .content {
+            background: white;
+            border-radius: 8px;
+            padding: 3rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        h2 {
+            color: #667eea;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #667eea;
+        }
+        
+        h3 {
+            color: #764ba2;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .info-box {
+            background: #f0f4ff;
+            border-left: 4px solid #667eea;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+        
+        .success-box {
+            background: #f0fff4;
+            border-left: 4px solid #48bb78;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+        
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        th {
+            background: #667eea;
+            color: white;
+            font-weight: 600;
+        }
+        
+        tr:hover {
+            background: #f7fafc;
+        }
+        
+        ul, ol {
+            margin-left: 2rem;
+            margin-top: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        li {
+            margin-bottom: 0.5rem;
+        }
+        
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+        
+        .metric-card {
+            background: #f7fafc;
+            padding: 1rem;
+            border-radius: 4px;
+            border-left: 3px solid #667eea;
+        }
+        
+        .metric-card h4 {
+            color: #667eea;
+            margin-bottom: 0.5rem;
+        }
+        
+        .back-link {
+            display: inline-block;
+            margin-top: 2rem;
+            padding: 0.75rem 1.5rem;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        
+        .back-link:hover {
+            background: #764ba2;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="nav-breadcrumb">
+            <a href="index.html">← Back to Documentation Home</a>
+        </div>
+        <h1>📋 Product Requirements Document</h1>
+        <p>DS-Star Multi-Agent System</p>
+    </div>
+    
+    <div class="container">
+        <div class="content">
+            <div class="info-box">
+                <strong>Document Version:</strong> 1.0<br>
+                <strong>Last Updated:</strong> December 2024<br>
+                <strong>Status:</strong> Implementation Complete
+            </div>
+            
+            <h2>1. Executive Summary</h2>
+            <p>The DS-Star Multi-Agent System is a proof-of-concept implementation of Google's DS-Star (Data Science Star) framework using AWS Strands Agents SDK and Amazon Nova Lite. The system demonstrates a star topology architecture where a central orchestrator coordinates specialized AI agents to solve complex data science tasks collaboratively.</p>
+            
+            <p>This implementation serves as a demonstration platform for stakeholder presentations, showcasing how multi-agent systems can decompose complex queries into specialized sub-tasks, coordinate expert agents, and synthesize comprehensive responses.</p>
+            
+            <h2>2. Business Objectives</h2>
+            
+            <h3>2.1 Primary Goals</h3>
+            <ul>
+                <li><strong>Demonstrate Multi-Agent Architecture:</strong> Showcase the star topology pattern with real-world airline operations data</li>
+                <li><strong>Validate AWS Strands SDK:</strong> Prove the viability of Strands for building production multi-agent systems</li>
+                <li><strong>Enable Stakeholder Presentations:</strong> Provide a working demo for technical and business audiences</li>
+                <li><strong>Establish Best Practices:</strong> Document patterns and practices for future multi-agent development</li>
+            </ul>
+            
+            <h3>2.2 Success Metrics</h3>
+            <div class="metric-grid">
+                <div class="metric-card">
+                    <h4>System Performance</h4>
+                    <p>Query response time < 30 seconds for 95% of queries</p>
+                </div>
+                <div class="metric-card">
+                    <h4>Routing Accuracy</h4>
+                    <p>Correct specialist routing for 90%+ of queries</p>
+                </div>
+                <div class="metric-card">
+                    <h4>Demo Reliability</h4>
+                    <p>Zero crashes during stakeholder presentations</p>
+                </div>
+                <div class="metric-card">
+                    <h4>Code Quality</h4>
+                    <p>Comprehensive test coverage with unit and integration tests</p>
+                </div>
+            </div>
+            
+            <h2>3. Target Users</h2>
+            
+            <h3>3.1 Primary Users</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>User Type</th>
+                        <th>Description</th>
+                        <th>Key Needs</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Demo Presenters</strong></td>
+                        <td>Technical staff demonstrating the system to stakeholders</td>
+                        <td>Reliable demo scenarios, clear investigation stream, easy setup</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Technical Stakeholders</strong></td>
+                        <td>Engineers and architects evaluating multi-agent patterns</td>
+                        <td>Architecture visibility, code examples, extensibility</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Business Stakeholders</strong></td>
+                        <td>Decision makers assessing AI capabilities</td>
+                        <td>Clear value demonstration, real-world use cases, ROI potential</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Developers</strong></td>
+                        <td>Engineers building on or extending the system</td>
+                        <td>Clean code, documentation, extensible architecture</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <h2>4. Product Features</h2>
+            
+            <h3>4.1 Core Features</h3>
+            
+            <h4>F1: Intelligent Query Routing</h4>
+            <div class="info-box">
+                <strong>Priority:</strong> P0 (Must Have)<br>
+                <strong>Description:</strong> Orchestrator analyzes natural language queries and routes to appropriate specialist agents based on intent and domain keywords.
+            </div>
+            <ul>
+                <li>Single-domain routing for focused queries</li>
+                <li>Multi-domain routing for complex queries spanning multiple specialties</li>
+                <li>Context-aware routing using conversation history</li>
+                <li>Fallback to data analyst for ambiguous queries</li>
+            </ul>
+            
+            <h4>F2: Specialist Agent Coordination</h4>
+            <div class="info-box">
+                <strong>Priority:</strong> P0 (Must Have)<br>
+                <strong>Description:</strong> Three specialized agents handle domain-specific tasks with focused expertise.
+            </div>
+            <ul>
+                <li><strong>Data Analyst Agent:</strong> Statistical analysis, KPI calculations, data exploration</li>
+                <li><strong>ML Engineer Agent:</strong> Model recommendations, algorithm selection, code generation</li>
+                <li><strong>Visualization Expert Agent:</strong> Chart recommendations, matplotlib/Plotly code generation</li>
+            </ul>
+            
+            <h4>F3: Investigation Stream</h4>
+            <div class="info-box">
+                <strong>Priority:</strong> P0 (Must Have)<br>
+                <strong>Description:</strong> Real-time streaming of agent reasoning steps, tool calls, and intermediate results.
+            </div>
+            <ul>
+                <li>Agent start/end events with timing</li>
+                <li>Routing decisions with explanations</li>
+                <li>Tool invocations with inputs/outputs</li>
+                <li>Verbose mode for detailed debugging</li>
+            </ul>
+            
+            <h4>F4: Response Synthesis</h4>
+            <div class="info-box">
+                <strong>Priority:</strong> P0 (Must Have)<br>
+                <strong>Description:</strong> Orchestrator combines specialist responses into coherent, comprehensive answers.
+            </div>
+            <ul>
+                <li>Attribution of insights to specialists</li>
+                <li>Narrative flow across multiple specialist contributions</li>
+                <li>Chart specification integration</li>
+                <li>Context preservation for follow-up queries</li>
+            </ul>
+            
+            <h4>F5: Conversation Management</h4>
+            <div class="info-box">
+                <strong>Priority:</strong> P1 (Should Have)<br>
+                <strong>Description:</strong> Multi-turn conversation support with context tracking and history management.
+            </div>
+            <ul>
+                <li>Conversation history storage</li>
+                <li>Token-aware context truncation</li>
+                <li>Follow-up query handling</li>
+                <li>History clear command</li>
+            </ul>
+            
+            <h4>F6: Chart Output Generation</h4>
+            <div class="info-box">
+                <strong>Priority:</strong> P1 (Should Have)<br>
+                <strong>Description:</strong> Dual-format chart specifications for local and web rendering.
+            </div>
+            <ul>
+                <li>Matplotlib code generation for local use</li>
+                <li>Plotly JSON for web integration</li>
+                <li>Chart specification persistence</li>
+                <li>Multiple chart types (bar, line, scatter, pie, histogram, heatmap)</li>
+            </ul>
+            
+            <h4>F7: Error Handling & Resilience</h4>
+            <div class="info-box">
+                <strong>Priority:</strong> P0 (Must Have)<br>
+                <strong>Description:</strong> Robust error handling to maintain demo stability.
+            </div>
+            <ul>
+                <li>Exponential backoff retry for API failures</li>
+                <li>Graceful specialist failure handling</li>
+                <li>User-friendly error messages</li>
+                <li>Comprehensive logging for debugging</li>
+            </ul>
+            
+            <h4>F8: Configuration Management</h4>
+            <div class="info-box">
+                <strong>Priority:</strong> P1 (Should Have)<br>
+                <strong>Description:</strong> Flexible configuration via environment variables, files, and CLI arguments.
+            </div>
+            <ul>
+                <li>Environment variable support</li>
+                <li>JSON/YAML config files</li>
+                <li>CLI argument overrides</li>
+                <li>Configuration precedence: CLI > env > file > defaults</li>
+            </ul>
+            
+            <h3>4.2 Demo Features</h3>
+            
+            <h4>F9: Interactive CLI</h4>
+            <ul>
+                <li>User-friendly command-line interface</li>
+                <li>Help and command documentation</li>
+                <li>Graceful shutdown (Ctrl+C handling)</li>
+                <li>Clear status messages and feedback</li>
+            </ul>
+            
+            <h4>F10: Automated Demo Script</h4>
+            <ul>
+                <li>Pre-configured demo scenarios</li>
+                <li>Presenter notes and explanations</li>
+                <li>Auto-advance or manual progression</li>
+                <li>Comprehensive coverage of all features</li>
+            </ul>
+            
+            <h4>F11: Sample Dataset</h4>
+            <ul>
+                <li>Realistic airline operations data (1000+ records)</li>
+                <li>Multiple airlines, routes, and time periods</li>
+                <li>Comprehensive KPIs (OTP, delays, load factors, cancellations)</li>
+                <li>Automated dataset generation</li>
+            </ul>
+            
+            <h2>5. Non-Functional Requirements</h2>
+            
+            <h3>5.1 Performance</h3>
+            <ul>
+                <li><strong>Response Time:</strong> 95% of queries complete within 30 seconds</li>
+                <li><strong>Startup Time:</strong> System initialization under 10 seconds</li>
+                <li><strong>Memory Usage:</strong> Peak memory under 500MB for typical workloads</li>
+            </ul>
+            
+            <h3>5.2 Reliability</h3>
+            <ul>
+                <li><strong>Availability:</strong> Zero crashes during demo presentations</li>
+                <li><strong>Error Recovery:</strong> Graceful degradation when specialists fail</li>
+                <li><strong>Data Integrity:</strong> No data corruption or loss during operation</li>
+            </ul>
+            
+            <h3>5.3 Usability</h3>
+            <ul>
+                <li><strong>Setup Time:</strong> First-time setup under 5 minutes</li>
+                <li><strong>Learning Curve:</strong> Presenters proficient after 30-minute training</li>
+                <li><strong>Error Messages:</strong> Clear, actionable error messages for all failure modes</li>
+            </ul>
+            
+            <h3>5.4 Maintainability</h3>
+            <ul>
+                <li><strong>Code Quality:</strong> Comprehensive docstrings and type hints</li>
+                <li><strong>Test Coverage:</strong> Unit tests for all core modules</li>
+                <li><strong>Documentation:</strong> Complete API documentation and architecture guides</li>
+                <li><strong>Extensibility:</strong> Easy addition of new specialist agents</li>
+            </ul>
+            
+            <h2>6. Technical Constraints</h2>
+            
+            <h3>6.1 Technology Stack</h3>
+            <ul>
+                <li><strong>Language:</strong> Python 3.9+</li>
+                <li><strong>AI Framework:</strong> AWS Strands Agents SDK</li>
+                <li><strong>Foundation Model:</strong> Amazon Nova Lite (via Bedrock)</li>
+                <li><strong>Data Processing:</strong> Pandas, NumPy</li>
+                <li><strong>Visualization:</strong> Matplotlib, Plotly</li>
+                <li><strong>Testing:</strong> Pytest, Hypothesis (for property-based testing)</li>
+            </ul>
+            
+            <h3>6.2 Infrastructure</h3>
+            <ul>
+                <li><strong>Deployment:</strong> Local execution (no cloud deployment required)</li>
+                <li><strong>AWS Services:</strong> Amazon Bedrock API access required</li>
+                <li><strong>Credentials:</strong> AWS credentials via environment or credentials file</li>
+            </ul>
+            
+            <h2>7. Out of Scope</h2>
+            
+            <div class="info-box">
+                <p>The following features are explicitly out of scope for this proof-of-concept:</p>
+            </div>
+            
+            <ul>
+                <li>Production deployment infrastructure</li>
+                <li>Web-based user interface</li>
+                <li>Multi-user support or authentication</li>
+                <li>Real-time data integration with airline systems</li>
+                <li>Model fine-tuning or custom training</li>
+                <li>Persistent storage beyond conversation history</li>
+                <li>API endpoints for external integration</li>
+                <li>Performance optimization beyond demo requirements</li>
+            </ul>
+            
+            <h2>8. Future Enhancements</h2>
+            
+            <h3>8.1 Additional Specialist Agents</h3>
+            <ul>
+                <li><strong>Data Engineer Agent:</strong> ETL pipeline design and data transformation</li>
+                <li><strong>Statistics Expert Agent:</strong> Advanced statistical analysis and hypothesis testing</li>
+                <li><strong>Domain Expert Agent:</strong> Airline industry-specific insights and benchmarks</li>
+            </ul>
+            
+            <h3>8.2 Advanced Features</h3>
+            <ul>
+                <li>Web-based dashboard for visualization</li>
+                <li>Real-time data streaming integration</li>
+                <li>Multi-modal input (voice, images)</li>
+                <li>Collaborative multi-user sessions</li>
+                <li>Export to various formats (PDF, PowerPoint)</li>
+            </ul>
+            
+            <h2>9. Risks & Mitigation</h2>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>Risk</th>
+                        <th>Impact</th>
+                        <th>Probability</th>
+                        <th>Mitigation</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Bedrock API throttling during demo</td>
+                        <td>High</td>
+                        <td>Medium</td>
+                        <td>Implement exponential backoff retry, test before presentations</td>
+                    </tr>
+                    <tr>
+                        <td>Incorrect query routing</td>
+                        <td>Medium</td>
+                        <td>Medium</td>
+                        <td>Comprehensive keyword patterns, fallback to data analyst</td>
+                    </tr>
+                    <tr>
+                        <td>Specialist agent failures</td>
+                        <td>Medium</td>
+                        <td>Low</td>
+                        <td>Safe wrapper functions with fallback responses</td>
+                    </tr>
+                    <tr>
+                        <td>Token limit exceeded</td>
+                        <td>Low</td>
+                        <td>Medium</td>
+                        <td>Context truncation with preservation of recent history</td>
+                    </tr>
+                    <tr>
+                        <td>Setup complexity for presenters</td>
+                        <td>Medium</td>
+                        <td>Low</td>
+                        <td>Automated setup scripts, comprehensive documentation</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <h2>10. Acceptance Criteria</h2>
+            
+            <div class="success-box">
+                <h3>System is considered complete when:</h3>
+                <ul>
+                    <li>✓ All three specialist agents operational</li>
+                    <li>✓ Query routing works for single and multi-domain queries</li>
+                    <li>✓ Investigation stream displays all agent activities</li>
+                    <li>✓ Response synthesis combines specialist outputs coherently</li>
+                    <li>✓ Error handling prevents crashes during demos</li>
+                    <li>✓ Configuration supports multiple input methods</li>
+                    <li>✓ Sample dataset generated with realistic data</li>
+                    <li>✓ Demo script covers all major features</li>
+                    <li>✓ Documentation complete for all components</li>
+                    <li>✓ Unit tests pass for core modules</li>
+                </ul>
+            </div>
+            
+            <a href="index.html" class="back-link">← Back to Documentation Home</a>
+        </div>
+    </div>
+</body>
+</html>

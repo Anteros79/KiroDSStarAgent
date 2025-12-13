@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Technical Specification - DS-Star</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="header">
+        <div class="nav-breadcrumb"><a href="index.html">← Back to Documentation Home</a></div>
+        <h1>💻 Technical Specification</h1>
+        <p>DS-Star Multi-Agent System</p>
+    </div>
+    
+    <div class="container">
+        <div class="content">
+            <p><strong>Note:</strong> The complete technical specification is available in the <a href="../.kiro/specs/ds-star-multi-agent/design.md">design.md</a> file, which contains:</p>
+            
+            <ul>
+                <li>Detailed component interfaces and APIs</li>
+                <li>Data models and schemas</li>
+                <li>20 correctness properties for testing</li>
+                <li>Algorithm specifications</li>
+                <li>Integration details</li>
+            </ul>
+            
+            <p>This document provides a summary of key technical areas. For complete implementation details, please refer to the design document.</p>
+            
+            <h2>Key Technical Components</h2>
+            
+            <h3>1. Core Classes</h3>
+            <ul>
+                <li><code>OrchestratorAgent</code> - Central coordinator</li>
+                <li><code>InvestigationStreamHandler</code> - Event streaming</li>
+                <li><code>ChartOutputHandler</code> - Visualization output</li>
+                <li><code>BedrockRetryHandler</code> - API resilience</li>
+            </ul>
+            
+            <h3>2. Data Models</h3>
+            <ul>
+                <li><code>AgentResponse</code> - Complete query response</li>
+                <li><code>SpecialistResponse</code> - Individual specialist output</li>
+                <li><code>ChartSpecification</code> - Visualization specs</li>
+                <li><code>Config</code> - System configuration</li>
+            </ul>
+            
+            <h3>3. Integration Points</h3>
+            <ul>
+                <li>AWS Bedrock API for model inference</li>
+                <li>Strands Agents SDK for agent framework</li>
+                <li>Pandas for data operations</li>
+                <li>Matplotlib/Plotly for visualizations</li>
+            </ul>
+            
+            <a href="index.html" class="back-link">← Back to Documentation Home</a>
+        </div>
+    </div>
+</body>
+</html>

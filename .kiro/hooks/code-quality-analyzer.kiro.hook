@@ -1,0 +1,17 @@
+{
+  "enabled": true,
+  "name": "Code Quality Analyzer",
+  "description": "Monitors source code files for changes and provides suggestions for code improvements including code smells, design patterns, best practices, readability, maintainability, and performance optimizations",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "src/**/*.py",
+      "tests/**/*.py"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Analyze the modified code in the changed file for potential improvements. Focus on:\n1. Code smells and anti-patterns\n2. Applicable design patterns that could improve the structure\n3. Best practices for Python development\n4. Readability improvements (naming, structure, documentation)\n5. Maintainability concerns (coupling, complexity, testability)\n6. Performance optimizations (algorithmic efficiency, resource usage)\n\nProvide specific, actionable suggestions while ensuring the existing functionality is maintained. Be constructive and prioritize the most impactful improvements."
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "enabled": true,
+  "name": "Update Docs on Source Change",
+  "description": "Listens for changes to Python source files (*.py), configuration files (pyproject.toml, requirements.txt), and environment files (.env.example). When these files are edited, asks the agent to review the changes and update the README.md accordingly to keep documentation in sync with the codebase.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "src/**/*.py",
+      "tests/**/*.py",
+      "pyproject.toml",
+      "requirements.txt",
+      ".env.example"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Source files have been modified. Please review the changes and update the README.md file to reflect any new functionality, configuration changes, or usage instructions. Ensure the documentation accurately describes the current state of the codebase."
+  }
+}

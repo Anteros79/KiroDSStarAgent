@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Architecture - DS-Star</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .nav-breadcrumb {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        
+        .nav-breadcrumb a {
+            color: white;
+            text-decoration: none;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+        }
+        
+        .content {
+            background: white;
+            border-radius: 8px;
+            padding: 3rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        h2 {
+            color: #667eea;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #667eea;
+        }
+        
+        h3 {
+            color: #764ba2;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .diagram {
+            background: #f7fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 2rem;
+            margin: 1.5rem 0;
+            text-align: center;
+        }
+        
+        .diagram svg {
+            max-width: 100%;
+            height: auto;
+        }
+        
+        .component-box {
+            background: #f0f4ff;
+            border-left: 4px solid #667eea;
+            padding: 1.5rem;
+            margin: 1rem 0;
+        }
+        
+        .component-box h4 {
+            color: #667eea;
+            margin-bottom: 0.5rem;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+        
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        th {
+            background: #667eea;
+            color: white;
+            font-weight: 600;
+        }
+        
+        tr:hover {
+            background: #f7fafc;
+        }
+        
+        ul, ol {
+            margin-left: 2rem;
+            margin-top: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        li {
+            margin-bottom: 0.5rem;
+        }
+        
+        .tech-stack {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+        
+        .tech-card {
+            background: #f7fafc;
+            padding: 1rem;
+            border-radius: 4px;
+            border-left: 3px solid #667eea;
+        }
+        
+        .tech-card h4 {
+            color: #667eea;
+            margin-bottom: 0.5rem;
+        }
+        
+        code {
+            background: #f7fafc;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        
+        pre {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 1rem;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+        
+        pre code {
+            background: none;
+            color: inherit;
+            padding: 0;
+        }
+        
+        .back-link {
+            display: inline-block;
+            margin-top: 2rem;
+            padding: 0.75rem 1.5rem;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        
+        .back-link:hover {
+            background: #764ba2;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="nav-breadcrumb">
+            <a href="index.html">← Back to Documentation Home</a>
+        </div>
+        <h1>🏗️ System Architecture</h1>
+        <p>DS-Star Multi-Agent System</p>
+    </div>
+    
+    <div class="container">
+        <div class="content">
+            <h2>1. Architecture Overview</h2>
+            
+            <p>The DS-Star Multi-Agent System implements a <strong>star topology</strong> architecture where a central Orchestrator Agent coordinates multiple specialized agents. This pattern enables flexible, scalable multi-agent collaboration while maintaining clear separation of concerns.</p>
+            
+            <div class="diagram">
+                <svg width="800" height="500" viewBox="0 0 800 500">
+                    <!-- Central Orchestrator -->
+                    <circle cx="400" cy="250" r="60" fill="#667eea" stroke="#764ba2" stroke-width="3"/>
+                    <text x="400" y="245" text-anchor="middle" fill="white" font-size="14" font-weight="bold">Orchestrator</text>
+                    <text x="400" y="265" text-anchor="middle" fill="white" font-size="12">Agent</text>
+                    
+                    <!-- Data Analyst -->
+                    <circle cx="200" cy="100" r="50" fill="#48bb78" stroke="#38a169" stroke-width="2"/>
+                    <text x="200" y="95" text-anchor="middle" fill="white" font-size="12" font-weight="bold">Data</text>
+                    <text x="200" y="110" text-anchor="middle" fill="white" font-size="12">Analyst</text>
+                    <line x1="240" y1="130" x2="360" y2="210" stroke="#667eea" stroke-width="2" stroke-dasharray="5,5"/>
+                    
+                    <!-- ML Engineer -->
+                    <circle cx="600" cy="100" r="50" fill="#ed8936" stroke="#dd6b20" stroke-width="2"/>
+                    <text x="600" y="95" text-anchor="middle" fill="white" font-size="12" font-weight="bold">ML</text>
+                    <text x="600" y="110" text-anchor="middle" fill="white" font-size="12">Engineer</text>
+                    <line x1="560" y1="130" x2="440" y2="210" stroke="#667eea" stroke-width="2" stroke-dasharray="5,5"/>
+                    
+                    <!-- Visualization Expert -->
+                    <circle cx="400" cy="450" r="50" fill="#9f7aea" stroke="#805ad5" stroke-width="2"/>
+                    <text x="400" y="445" text-anchor="middle" fill="white" font-size="12" font-weight="bold">Visualization</text>
+                    <text x="400" y="460" text-anchor="middle" fill="white" font-size="12">Expert</text>
+                    <line x1="400" y1="400" x2="400" y2="310" stroke="#667eea" stroke-width="2" stroke-dasharray="5,5"/>
+                    
+                    <!-- User -->
+                    <rect x="350" y="20" width="100" height="40" fill="#4299e1" stroke="#3182ce" stroke-width="2" rx="5"/>
+                    <text x="400" y="45" text-anchor="middle" fill="white" font-size="14" font-weight="bold">User CLI</text>
+                    <line x1="400" y1="60" x2="400" y2="190" stroke="#4299e1" stroke-width="3" marker-end="url(#arrowblue)"/>
+                    
+                    <!-- Shared Resources -->
+                    <rect x="50" y="300" width="120" height="60" fill="#f7fafc" stroke="#cbd5e0" stroke-width="2" rx="5"/>
+                    <text x="110" y="325" text-anchor="middle" fill="#2d3748" font-size="11" font-weight="bold">Airline Data</text>
+                    <text x="110" y="340" text-anchor="middle" fill="#718096" font-size="10">Sample Dataset</text>
+                    
+                    <rect x="630" y="300" width="120" height="60" fill="#f7fafc" stroke="#cbd5e0" stroke-width="2" rx="5"/>
+                    <text x="690" y="325" text-anchor="middle" fill="#2d3748" font-size="11" font-weight="bold">Chart Output</text>
+                    <text x="690" y="340" text-anchor="middle" fill="#718096" font-size="10">JSON/Code</text>
+                    
+                    <!-- Arrow markers -->
+                    <defs>
+                        <marker id="arrowblue" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+                            <path d="M0,0 L0,6 L9,3 z" fill="#4299e1" />
+                        </marker>
+                    </defs>
+                </svg>
+                <p style="margin-top: 1rem; color: #718096; font-size: 0.9rem;">
+                    <strong>Star Topology:</strong> Central orchestrator coordinates all specialist agents
+                </p>
+            </div>
+            
+            <h3>1.1 Key Architectural Principles</h3>
+            <ul>
+                <li><strong>Separation of Concerns:</strong> Each specialist focuses on a single domain</li>
+                <li><strong>Loose Coupling:</strong> Specialists are independent and can be added/removed easily</li>
+                <li><strong>Agent-as-Tool Pattern:</strong> Specialists wrapped as tools for the orchestrator</li>
+                <li><strong>Shared Context:</strong> Conversation history and state passed between agents</li>
+                <li><strong>Graceful Degradation:</strong> System continues operating if individual specialists fail</li>
+            </ul>
+            
+            <h2>2. Component Architecture</h2>
+            
+            <h3>2.1 Orchestrator Agent</h3>
+            <div class="component-box">
+                <h4>Core Responsibilities</h4>
+                <ul>
+                    <li>Receive and analyze user queries</li>
+                    <li>Determine appropriate specialist routing</li>
+                    <li>Coordinate sequential specialist invocations</li>
+                    <li>Synthesize responses from multiple specialists</li>
+                    <li>Manage conversation history and context</li>
+                </ul>
+                
+                <h4>Key Components</h4>
+                <ul>
+                    <li><code>OrchestratorAgent</code> class - Main coordination logic</li>
+                    <li><code>_route_query()</code> - Intent analysis and routing decision</li>
+                    <li><code>_synthesize_responses()</code> - Response combination</li>
+                    <li><code>_truncate_history()</code> - Token-aware context management</li>
+                </ul>
+                
+                <h4>Technology</h4>
+                <p>Built on AWS Strands Agent framework with Amazon Nova Lite foundation model</p>
+            </div>
+            
+            <h3>2.2 Specialist Agents</h3>
+            
+            <div class="component-box">
+                <h4>Data Analyst Agent</h4>
+                <p><strong>Domain:</strong> Statistical analysis, data exploration, KPI calculations</p>
+                <p><strong>Tools:</strong> <code>query_airline_data</code> (pandas operations)</p>
+                <p><strong>Capabilities:</strong></p>
+                <ul>
+                    <li>Calculate on-time performance metrics</li>
+                    <li>Analyze delay patterns and causes</li>
+                    <li>Compute load factors and operational statistics</li>
+                    <li>Identify trends and anomalies</li>
+                </ul>
+            </div>
+            
+            <div class="component-box">
+                <h4>ML Engineer Agent</h4>
+                <p><strong>Domain:</strong> Machine learning recommendations, model selection, code generation</p>
+                <p><strong>Tools:</strong> Python code generation, algorithm knowledge base</p>
+                <p><strong>Capabilities:</strong></p>
+                <ul>
+                    <li>Recommend appropriate ML algorithms</li>
+                    <li>Explain model trade-offs</li>
+                    <li>Generate scikit-learn implementation code</li>
+                    <li>Suggest feature engineering approaches</li>
+                </ul>
+            </div>
+            
+            <div class="component-box">
+                <h4>Visualization Expert Agent</h4>
+                <p><strong>Domain:</strong> Data visualization, chart design, code generation</p>
+                <p><strong>Tools:</strong> Chart specification generator, matplotlib/Plotly code generator</p>
+                <p><strong>Capabilities:</strong></p>
+                <ul>
+                    <li>Recommend appropriate chart types</li>
+                    <li>Generate matplotlib visualization code</li>
+                    <li>Create Plotly JSON specifications</li>
+                    <li>Provide visualization best practices</li>
+                </ul>
+            </div>
+            
+            <h3>2.3 Supporting Components</h3>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>Component</th>
+                        <th>Purpose</th>
+                        <th>Key Features</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Investigation Stream Handler</strong></td>
+                        <td>Real-time activity streaming</td>
+                        <td>Agent events, tool calls, timing, verbose mode</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Chart Output Handler</strong></td>
+                        <td>Chart specification management</td>
+                        <td>Dual format (matplotlib/Plotly), JSON persistence</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Airline Data Loader</strong></td>
+                        <td>Dataset management</td>
+                        <td>Schema validation, query interface, sample data</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Retry Handler</strong></td>
+                        <td>API failure resilience</td>
+                        <td>Exponential backoff, configurable attempts</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Error Handler</strong></td>
+                        <td>Specialist failure management</td>
+                        <td>Safe wrappers, fallback responses</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Configuration Manager</strong></td>
+                        <td>System configuration</td>
+                        <td>Multi-source loading, validation, precedence</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <h2>3. Data Flow Architecture</h2>
+            
+            <h3>3.1 Query Processing Flow</h3>
+            <pre><code>1. User Input
+   ↓
+2. CLI Interface (main.py)
+   ↓
+3. Orchestrator Agent
+   ├─ Query Analysis
+   ├─ Intent Classification
+   └─ Routing Decision
+   ↓
+4. Specialist Agent(s)
+   ├─ Tool Invocation
+   ├─ Data Processing
+   └─ Response Generation
+   ↓
+5. Response Synthesis
+   ├─ Combine Specialist Outputs
+   ├─ Add Attribution
+   └─ Format Response
+   ↓
+6. User Output
+   ├─ Investigation Stream
+   └─ Final Response</code></pre>
+            
+            <h3>3.2 Context Flow</h3>
+            <pre><code>Conversation History
+   ↓
+Orchestrator
+   ├─ Extract Relevant Context
+   ├─ Token Truncation
+   └─ Context Packaging
+   ↓
+Specialist Agents
+   ├─ Receive Context
+   ├─ Process with History
+   └─ Generate Contextual Response
+   ↓
+Updated History
+   └─ Store for Next Turn</code></pre>
+            
+            <h2>4. Technology Stack</h2>
+            
+            <div class="tech-stack">
+                <div class="tech-card">
+                    <h4>Core Framework</h4>
+                    <ul style="margin-left: 1rem; font-size: 0.9rem;">
+                        <li>AWS Strands Agents SDK</li>
+                        <li>Amazon Bedrock API</li>
+                        <li>Amazon Nova Lite Model</li>
+                    </ul>
+                </div>
+                
+                <div class="tech-card">
+                    <h4>Language & Runtime</h4>
+                    <ul style="margin-left: 1rem; font-size: 0.9rem;">
+                        <li>Python 3.9+</li>
+                        <li>Type hints (typing module)</li>
+                        <li>Dataclasses</li>
+                    </ul>
+                </div>
+                
+                <div class="tech-card">
+                    <h4>Data Processing</h4>
+                    <ul style="margin-left: 1rem; font-size: 0.9rem;">
+                        <li>Pandas (data analysis)</li>
+                        <li>NumPy (numerical operations)</li>
+                        <li>CSV (data storage)</li>
+                    </ul>
+                </div>
+                
+                <div class="tech-card">
+                    <h4>Visualization</h4>
+                    <ul style="margin-left: 1rem; font-size: 0.9rem;">
+                        <li>Matplotlib (local rendering)</li>
+                        <li>Plotly (web rendering)</li>
+                        <li>Seaborn (statistical plots)</li>
+                    </ul>
+                </div>
+                
+                <div class="tech-card">
+                    <h4>Configuration</h4>
+                    <ul style="margin-left: 1rem; font-size: 0.9rem;">
+                        <li>JSON (config files)</li>
+                        <li>YAML (config files)</li>
+                        <li>Environment variables</li>
+                    </ul>
+                </div>
+                
+                <div class="tech-card">
+                    <h4>Testing</h4>
+                    <ul style="margin-left: 1rem; font-size: 0.9rem;">
+                        <li>Pytest (unit testing)</li>
+                        <li>Hypothesis (property testing)</li>
+                        <li>Mock (test doubles)</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <h2>5. Module Structure</h2>
+            
+            <pre><code>ds-star-multi-agent/
+├── src/
+│   ├── main.py                    # CLI entry point
+│   ├── config.py                  # Configuration management
+│   ├── models.py                  # Data models
+│   ├── agents/
+│   │   ├── orchestrator.py        # Central coordinator
+│   │   └── specialists/
+│   │       ├── data_analyst.py    # Data analysis specialist
+│   │       ├── ml_engineer.py     # ML specialist
+│   │       └── visualization_expert.py  # Viz specialist
+│   ├── handlers/
+│   │   ├── stream_handler.py      # Investigation streaming
+│   │   ├── chart_handler.py       # Chart output
+│   │   ├── error_handler.py       # Error management
+│   │   └── retry_handler.py       # API retry logic
+│   └── data/
+│       ├── airline_data.py        # Data loader
+│       └── generate_sample_data.py # Dataset generator
+├── tests/
+│   ├── test_config.py
+│   ├── test_orchestrator.py
+│   ├── test_specialists.py
+│   └── ...
+├── demo/
+│   ├── run_demo.py                # Automated demo
+│   └── sample_queries.md          # Query examples
+├── data/
+│   └── airline_operations.csv     # Sample dataset
+└── output/
+    └── [chart specifications]     # Generated charts</code></pre>
+            
+            <h2>6. Deployment Architecture</h2>
+            
+            <h3>6.1 Local Execution</h3>
+            <p>The system is designed for local execution on developer workstations or demo machines:</p>
+            <ul>
+                <li><strong>No server infrastructure required</strong></li>
+                <li><strong>Direct Bedrock API calls</strong> via AWS SDK</li>
+                <li><strong>Local file system</strong> for data and output</li>
+                <li><strong>Command-line interface</strong> for interaction</li>
+            </ul>
+            
+            <h3>6.2 AWS Integration</h3>
+            <ul>
+                <li><strong>Amazon Bedrock:</strong> Foundation model inference</li>
+                <li><strong>AWS Credentials:</strong> Environment variables or credentials file</li>
+                <li><strong>Region Selection:</strong> Configurable AWS region</li>
+            </ul>
+            
+            <h2>7. Security Architecture</h2>
+            
+            <h3>7.1 Credential Management</h3>
+            <ul>
+                <li>AWS credentials via standard boto3 credential chain</li>
+                <li>No credentials stored in code or configuration files</li>
+                <li>Environment variable support for CI/CD</li>
+            </ul>
+            
+            <h3>7.2 Data Security</h3>
+            <ul>
+                <li>Sample data only (no real airline data)</li>
+                <li>Local file system storage</li>
+                <li>No external data transmission except to Bedrock API</li>
+            </ul>
+            
+            <h3>7.3 API Security</h3>
+            <ul>
+                <li>HTTPS for all Bedrock API calls</li>
+                <li>AWS IAM-based authentication</li>
+                <li>Rate limiting via retry handler</li>
+            </ul>
+            
+            <h2>8. Scalability Considerations</h2>
+            
+            <h3>8.1 Current Limitations</h3>
+            <ul>
+                <li><strong>Single-user:</strong> No concurrent user support</li>
+                <li><strong>In-memory state:</strong> Conversation history not persisted</li>
+                <li><strong>Sequential processing:</strong> One query at a time</li>
+                <li><strong>Local execution:</strong> Limited by local machine resources</li>
+            </ul>
+            
+            <h3>8.2 Future Scalability Path</h3>
+            <ul>
+                <li><strong>Horizontal scaling:</strong> Deploy multiple orchestrator instances</li>
+                <li><strong>Persistent storage:</strong> Database for conversation history</li>
+                <li><strong>Async processing:</strong> Parallel specialist invocations</li>
+                <li><strong>Load balancing:</strong> Distribute queries across instances</li>
+                <li><strong>Caching:</strong> Cache common query results</li>
+            </ul>
+            
+            <h2>9. Extensibility</h2>
+            
+            <h3>9.1 Adding New Specialists</h3>
+            <p>The architecture supports easy addition of new specialist agents:</p>
+            <ol>
+                <li>Create new specialist module in <code>src/agents/specialists/</code></li>
+                <li>Implement <code>@tool</code> decorated function</li>
+                <li>Define system prompt and capabilities</li>
+                <li>Register with orchestrator in <code>main.py</code></li>
+                <li>Update routing keywords in orchestrator</li>
+            </ol>
+            
+            <h3>9.2 Custom Tools</h3>
+            <p>Specialists can be extended with custom tools:</p>
+            <ul>
+                <li>Implement tool function with <code>@tool</code> decorator</li>
+                <li>Add to specialist's tool list</li>
+                <li>Document in specialist's system prompt</li>
+            </ul>
+            
+            <h3>9.3 Alternative Models</h3>
+            <p>System supports different foundation models:</p>
+            <ul>
+                <li>Configure via <code>model_id</code> parameter</li>
+                <li>Any Bedrock-supported model can be used</li>
+                <li>Adjust <code>max_tokens</code> and <code>temperature</code> as needed</li>
+            </ul>
+            
+            <a href="index.html" class="back-link">← Back to Documentation Home</a>
+        </div>
+    </div>
+</body>
+</html>

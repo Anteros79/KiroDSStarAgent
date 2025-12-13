@@ -1,0 +1,12 @@
+strands-agents
+strands-agents-tools
+pandas
+matplotlib
+plotly
+hypothesis
+pytest
+pyyaml
+fastapi
+uvicorn[standard]
+websockets
+python-multipart

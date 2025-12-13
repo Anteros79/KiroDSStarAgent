@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ds-star-multi-agent"
+version = "0.1.0"
+description = "DS-Star multi-agent framework implementation using AWS Strands Agents SDK"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "strands-agents",
+    "strands-agents-tools",
+    "pandas",
+    "matplotlib",
+    "plotly",
+    "hypothesis",
+    "pytest",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "hypothesis",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

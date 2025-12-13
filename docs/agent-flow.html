@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Flow Diagrams - DS-Star</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header h1 { font-size: 2rem; margin-bottom: 0.5rem; }
+        .nav-breadcrumb { font-size: 0.9rem; opacity: 0.9; }
+        .nav-breadcrumb a { color: white; text-decoration: none; }
+        .container { max-width: 1200px; margin: 2rem auto; padding: 0 2rem; }
+        .content { background: white; border-radius: 8px; padding: 3rem; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        h2 { color: #667eea; margin-top: 2rem; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid #667eea; }
+        h3 { color: #764ba2; margin-top: 1.5rem; margin-bottom: 0.75rem; }
+        .diagram { background: #f7fafc; border: 2px solid #e2e8f0; border-radius: 8px; padding: 2rem; margin: 1.5rem 0; }
+        .diagram svg { max-width: 100%; height: auto; }
+        ul, ol { margin-left: 2rem; margin-top: 0.5rem; margin-bottom: 1rem; }
+        li { margin-bottom: 0.5rem; }
+        .flow-box { background: #f0f4ff; border-left: 4px solid #667eea; padding: 1rem; margin: 1rem 0; }
+        .back-link {
+            display: inline-block; margin-top: 2rem; padding: 0.75rem 1.5rem;
+            background: #667eea; color: white; text-decoration: none;
+            border-radius: 4px; transition: background 0.2s;
+        }
+        .back-link:hover { background: #764ba2; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="nav-breadcrumb"><a href="index.html">← Back to Documentation Home</a></div>
+        <h1>🔄 Agent Flow Diagrams</h1>
+        <p>DS-Star Multi-Agent System</p>
+    </div>
+
+    <div class="container">
+        <div class="content">
+            <h2>1. Single-Domain Query Flow</h2>
+            <p>When a user submits a query that requires only one specialist's expertise:</p>
+            
+            <div class="diagram">
+                <svg width="700" height="600" viewBox="0 0 700 600">
+                    <!-- User -->
+                    <rect x="300" y="20" width="100" height="40" fill="#4299e1" stroke="#3182ce" stroke-width="2" rx="5"/>
+                    <text x="350" y="45" text-anchor="middle" fill="white" font-size="14" font-weight="bold">User</text>
+                    
+                    <!-- Query -->
+                    <text x="350" y="90" text-anchor="middle" fill="#2d3748" font-size="12" font-style="italic">"What's the average delay by airline?"</text>
+                    <line x1="350" y1="60" x2="350" y2="110" stroke="#4299e1" stroke-width="2" marker-end="url(#arrow)"/>
+                    
+                    <!-- Orchestrator -->
+                    <rect x="275" y="120" width="150" height="60" fill="#667eea" stroke="#764ba2" stroke-width="2" rx="5"/>
+                    <text x="350" y="145" text-anchor="middle" fill="white" font-size="14" font-weight="bold">Orchestrator Agent</text>
+                    <text x="350" y="165" text-anchor="middle" fill="white" font-size="11">1. Analyze Query</text>
+                    
+                    <!-- Routing Decision -->
+                    <rect x="250" y="200" width="200" height="50" fill="#f7fafc" stroke="#cbd5e0" stroke-width="2" rx="5"/>
+                    <text x="350" y="220" text-anchor="middle" fill="#2d3748" font-size="12" font-weight="bold">Routing Decision</text>
+                    <text x="350" y="238" text-anchor="middle" fill="#718096" font-size="10">Keywords: "average", "delay", "airline"</text>
+                    <line x1="350" y1="180" x2="350" y2="200" stroke="#667eea" stroke-width="2" marker-end="url(#arrow)"/>
+                    
+                    <!-- Route to Data Analyst -->
+                    <text x="350" y="275" text-anchor="middle" fill="#2d3748" font-size="11" font-weight="bold">Route to: Data Analyst</text>
+                    <line x1="350" y1="250" x2="350" y2="290" stroke="#667eea" stroke-width="2" marker-end="url(#arrow)"/>
+                    
+                    <!-- Data Analyst -->
+                    <rect x="275" y="300" width="150" height="80" fill="#48bb78" stroke="#38a169" stroke-width="2" rx="5"/>
+                    <text x="350" y="325" text-anchor="middle" fill="white" font-size="14" font-weight="bold">Data Analyst</text>
+                    <text x="350" y="345" text-anchor="middle" fill="white" font-size="10">2. Query airline data</text>
+                    <text x="350" y="360" text-anchor="middle" fill="white" font-size="10">3. Calculate averages</text>
+                    <text x="350" y="375" text-anchor="middle" fill="white" font-size="10">4. Format results</text>
+                    
+                    <!-- Response -->
+                    <line x1="350" y1="380" x2="350" y2="410" stroke="#48bb78" stroke-width="2" marker-end="url(#arrow)"/>
+                    <rect x="250" y="420" width="200" height="50" fill="#f0fff4" stroke="#48bb78" stroke-width="2" rx="5"/>
+                    <text x="350" y="440" text-anchor="middle" fill="#2d3748" font-size="11" font-weight="bold">Specialist Response</text>
+                    <text x="350" y="458" text-anchor="middle" fill="#718096" font-size="10">Analysis results with statistics</text>
+                    
+                    <!-- Synthesis -->
+                    <line x1="350" y1="470" x2="350" y2="490" stroke="#667eea" stroke-width="2" marker-end="url(#arrow)"/>
+                    <rect x="275" y="500" width="150" height="50" fill="#667eea" stroke="#764ba2" stroke-width="2" rx="5"/>
+                    <text x="350" y="520" text-anchor="middle" fill="white" font-size="12" font-weight="bold">Synthesize Response</text>
+                    <text x="350" y="538" text-anchor="middle" fill="white" font-size="10">5. Format final answer</text>
+                    
+                    <!-- Final Response -->
+                    <line x1="350" y1="550" x2="350" y2="570" stroke="#4299e1" stroke-width="2" marker-end="url(#arrow)"/>
+                    <rect x="300" y="570" width="100" height="30" fill="#4299e1" stroke="#3182ce" stroke-width="2" rx="5"/>
+                    <text x="350" y="590" text-anchor="middle" fill="white" font-size="12" font-weight="bold">User</text>
+                    
+                    <!-- Arrow marker -->
+                    <defs>
+                        <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+                            <path d="M0,0 L0,6 L9,3 z" fill="#667eea" />
+                        </marker>
+                    </defs>
+                </svg>
+            </div>
+
+            <div class="flow-box">
+                <h4>Flow Steps:</h4>
+                <ol>
+                    <li><strong>User Query:</strong> User submits natural language question</li>
+                    <li><strong>Query Analysis:</strong> Orchestrator analyzes intent and keywords</li>
+                    <li><strong>Routing Decision:</strong> Determines Data Analyst is appropriate</li>
+                    <li><strong>Specialist Invocation:</strong> Data Analyst processes query with tools</li>
+                    <li><strong>Response Generation:</strong> Specialist returns structured response</li>
+                    <li><strong>Synthesis:</strong> Orchestrator formats final answer</li>
+                    <li><strong>User Output:</strong> Complete response delivered to user</li>
+                </ol>
+            </div>
+            
+            <h2>2. Multi-Domain Query Flow</h2>
+            <p>When a query requires multiple specialists working in sequence:</p>
+            
+            <div class="diagram">
+                <svg width="800" height="750" viewBox="0 0 800 750">
+                    <!-- User -->
+                    <rect x="350" y="20" width="100" height="40" fill="#4299e1" stroke="#3182ce" stroke-width="2" rx="5"/>
+                    <text x="400" y="45" text-anchor="middle" fill="white" font-size="14" font-weight="bold">User</text>
+                    
+                    <!-- Complex Query -->
+                    <text x="400" y="85" text-anchor="middle" fill="#2d3748" font-size="11" font-style="italic">"Analyze delays, recommend a model,</text>
+                    <text x="400" y="100" text-anchor="middle" fill="#2d3748" font-size="11" font-style="italic">and create visualizations"</text>
+                    <line x1="400" y1="60" x2="400" y2="115" stroke="#4299e1" stroke-width="2" marker-end="url(#arrow2)"/>
+                    
+                    <!-- Orchestrator -->
+                    <rect x="325" y="125" width="150" height="60" fill="#667eea" stroke="#764ba2" stroke-width="2" rx="5"/>
+                    <text x="400" y="150" text-anchor="middle" fill="white" font-size="14" font-weight="bold">Orchestrator</text>
+                    <text x="400" y="170" text-anchor="middle" fill="white" font-size="11">Multi-domain routing</text>
+                    
+                    <!-- Routing -->
+                    <line x1="400" y1="185" x2="400" y2="210" stroke="#667eea" stroke-width="2" marker-end="url(#arrow2)"/>
+                    <rect x="250" y="220" width="300" height="40" fill="#f7fafc" stroke="#cbd5e0" stroke-width="2" rx="5"/>
+                    <text x="400" y="245" text-anchor="middle" fill="#2d3748" font-size="11" font-weight="bold">Route: Data Analyst → ML Engineer → Viz Expert</text>
+                    
+                    <!-- Data Analyst -->
+                    <line x1="400" y1="260" x2="400" y2="285" stroke="#667eea" stroke-width="2" marker-end="url(#arrow2)"/>
+                    <rect x="325" y="295" width="150" height="70" fill="#48bb78" stroke="#38a169" stroke-width="2" rx="5"/>
+                    <text x="400" y="320" text-anchor="middle" fill="white" font-size="13" font-weight="bold">1. Data Analyst</text>
+                    <text x="400" y="340" text-anchor="middle" fill="white" font-size="10">Analyze delay patterns</text>
+                    <text x="400" y="355" text-anchor="middle" fill="white" font-size="10">Calculate statistics</text>
+                    
+                    <!-- Context passing -->
+                    <line x1="400" y1="365" x2="400" y2="390" stroke="#48bb78" stroke-width="2" marker-end="url(#arrow2)"/>
+                    <text x="400" y="405" text-anchor="middle" fill="#718096" font-size="10" font-style="italic">Pass analysis results as context</text>
+                    
+                    <!-- ML Engineer -->
+                    <line x1="400" y1="410" x2="400" y2="435" stroke="#667eea" stroke-width="2" marker-end="url(#arrow2)"/>
+                    <rect x="325" y="445" width="150" height="70" fill="#ed8936" stroke="#dd6b20" stroke-width="2" rx="5"/>
+                    <text x="400" y="470" text-anchor="middle" fill="white" font-size="13" font-weight="bold">2. ML Engineer</text>
+                    <text x="400" y="490" text-anchor="middle" fill="white" font-size="10">Recommend models</text>
+                    <text x="400" y="505" text-anchor="middle" fill="white" font-size="10">Generate code</text>
+                    
+                    <!-- Context passing -->
+                    <line x1="400" y1="515" x2="400" y2="540" stroke="#ed8936" stroke-width="2" marker-end="url(#arrow2)"/>
+                    <text x="400" y="555" text-anchor="middle" fill="#718096" font-size="10" font-style="italic">Pass ML recommendations as context</text>
+                    
+                    <!-- Visualization Expert -->
+                    <line x1="400" y1="560" x2="400" y2="585" stroke="#667eea" stroke-width="2" marker-end="url(#arrow2)"/>
+                    <rect x="325" y="595" width="150" height="70" fill="#9f7aea" stroke="#805ad5" stroke-width="2" rx="5"/>
+                    <text x="400" y="620" text-anchor="middle" fill="white" font-size="13" font-weight="bold">3. Viz Expert</text>
+                    <text x="400" y="640" text-anchor="middle" fill="white" font-size="10">Create charts</text>
+                    <text x="400" y="655" text-anchor="middle" fill="white" font-size="10">Generate code</text>
+                    
+                    <!-- Synthesis -->
+                    <line x1="400" y1="665" x2="400" y2="685" stroke="#9f7aea" stroke-width="2" marker-end="url(#arrow2)"/>
+                    <rect x="300" y="695" width="200" height="50" fill="#667eea" stroke="#764ba2" stroke-width="2" rx="5"/>
+                    <text x="400" y="715" text-anchor="middle" fill="white" font-size="12" font-weight="bold">Synthesize All Responses</text>
+                    <text x="400" y="733" text-anchor="middle" fill="white" font-size="10">Combine with attribution</text>
+                    
+                    <!-- Arrow marker -->
+                    <defs>
+                        <marker id="arrow2" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+                            <path d="M0,0 L0,6 L9,3 z" fill="#667eea" />
+                        </marker>
+                    </defs>
+                </svg>
+            </div>
+
+            <div class="flow-box">
+                <h4>Multi-Domain Flow Characteristics:</h4>
+                <ul>
+                    <li><strong>Sequential Execution:</strong> Specialists invoked one after another</li>
+                    <li><strong>Context Propagation:</strong> Each specialist receives previous results</li>
+                    <li><strong>Cumulative Knowledge:</strong> Later specialists build on earlier insights</li>
+                    <li><strong>Unified Response:</strong> Orchestrator synthesizes all contributions</li>
+                </ul>
+            </div>
+            
+            <h2>3. Investigation Stream Flow</h2>
+            <p>Real-time event streaming during query processing:</p>
+            
+            <div class="flow-box">
+                <h4>Event Sequence:</h4>
+                <pre style="background: #2d3748; color: #e2e8f0; padding: 1rem; border-radius: 4px; font-size: 0.85rem;">
+[10:23:45.123] 🤖 Agent Started: Orchestrator
+  Query: "What's the average delay by airline?"
+
+[10:23:45.234] 🎯 Routing to: data_analyst
+  Reasoning: Query contains data analysis keywords
+
+[10:23:45.345] 🔧 Tool: query_airline_data
+  query: "What's the average delay by airline?"
+
+[10:23:46.123] ✓ Tool Complete: query_airline_data (778ms)
+  Result: Average delay by airline calculated
+
+[10:23:46.234] ✅ Agent Complete: data_analyst (889ms)
+  Response: Analysis results with statistics...
+
+[10:23:46.345] ✅ Agent Complete: Orchestrator (1222ms)
+  Response: Synthesized final answer...
+                </pre>
+            </div>
+            
+            <h2>4. Error Handling Flow</h2>
+            <p>How the system handles failures gracefully:</p>
+            
+            <div class="diagram">
+                <svg width="700" height="500" viewBox="0 0 700 500">
+                    <!-- Normal Flow -->
+                    <rect x="50" y="50" width="120" height="40" fill="#667eea" stroke="#764ba2" stroke-width="2" rx="5"/>
+                    <text x="110" y="75" text-anchor="middle" fill="white" font-size="12" font-weight="bold">Orchestrator</text>
+                    
+                    <line x1="170" y1="70" x2="230" y2="70" stroke="#667eea" stroke-width="2" marker-end="url(#arrow3)"/>
+                    
+                    <rect x="240" y="50" width="120" height="40" fill="#48bb78" stroke="#38a169" stroke-width="2" rx="5"/>
+                    <text x="300" y="75" text-anchor="middle" fill="white" font-size="12" font-weight="bold">Specialist</text>
+                    
+                    <!-- Success Path -->
+                    <line x1="300" y1="90" x2="300" y2="130" stroke="#48bb78" stroke-width="2" marker-end="url(#arrow3)"/>
+                    <rect x="240" y="140" width="120" height="40" fill="#f0fff4" stroke="#48bb78" stroke-width="2" rx="5"/>
+                    <text x="300" y="165" text-anchor="middle" fill="#2d3748" font-size="11" font-weight="bold">✓ Success</text>
+                    
+                    <!-- Error Path -->
+                    <line x1="360" y1="70" x2="420" y2="70" stroke="#e53e3e" stroke-width="2" stroke-dasharray="5,5" marker-end="url(#arrow3)"/>
+                    <text x="390" y="60" text-anchor="middle" fill="#e53e3e" font-size="10">Error</text>
+                    
+                    <rect x="430" y="50" width="120" height="40" fill="#fed7d7" stroke="#e53e3e" stroke-width="2" rx="5"/>
+                    <text x="490" y="75" text-anchor="middle" fill="#c53030" font-size="11" font-weight="bold">Exception</text>
+                    
+                    <!-- Retry Logic -->
+                    <line x1="490" y1="90" x2="490" y2="130" stroke="#e53e3e" stroke-width="2" marker-end="url(#arrow3)"/>
+                    <rect x="430" y="140" width="120" height="60" fill="#fff5f5" stroke="#e53e3e" stroke-width="2" rx="5"/>
+                    <text x="490" y="160" text-anchor="middle" fill="#c53030" font-size="11" font-weight="bold">Retry Handler</text>
+                    <text x="490" y="178" text-anchor="middle" fill="#c53030" font-size="9">Exponential backoff</text>
+                    <text x="490" y="192" text-anchor="middle" fill="#c53030" font-size="9">Max 3 attempts</text>
+                    
+                    <!-- Retry Success -->
+                    <line x1="430" y1="170" x2="370" y2="170" stroke="#48bb78" stroke-width="2" marker-end="url(#arrow3)"/>
+                    <text x="400" y="160" text-anchor="middle" fill="#48bb78" font-size="9">Retry succeeds</text>
+                    
+                    <!-- Retry Failure -->
+                    <line x1="490" y1="200" x2="490" y2="240" stroke="#e53e3e" stroke-width="2" marker-end="url(#arrow3)"/>
+                    <text x="520" y="220" text-anchor="middle" fill="#e53e3e" font-size="9">All retries fail</text>
+                    
+                    <rect x="430" y="250" width="120" height="60" fill="#fff5f5" stroke="#e53e3e" stroke-width="2" rx="5"/>
+                    <text x="490" y="270" text-anchor="middle" fill="#c53030" font-size="11" font-weight="bold">Error Handler</text>
+                    <text x="490" y="288" text-anchor="middle" fill="#c53030" font-size="9">Catch exception</text>
+                    <text x="490" y="302" text-anchor="middle" fill="#c53030" font-size="9">Return fallback</text>
+                    
+                    <!-- Fallback Response -->
+                    <line x1="490" y1="310" x2="490" y2="350" stroke="#ed8936" stroke-width="2" marker-end="url(#arrow3)"/>
+                    <rect x="430" y="360" width="120" height="50" fill="#fffaf0" stroke="#ed8936" stroke-width="2" rx="5"/>
+                    <text x="490" y="380" text-anchor="middle" fill="#c05621" font-size="11" font-weight="bold">Fallback Response</text>
+                    <text x="490" y="398" text-anchor="middle" fill="#c05621" font-size="9">User-friendly message</text>
+                    
+                    <!-- Back to Orchestrator -->
+                    <line x1="430" y1="385" x2="170" y2="385" stroke="#667eea" stroke-width="2"/>
+                    <line x1="170" y1="385" x2="170" y2="90" stroke="#667eea" stroke-width="2" marker-end="url(#arrow3)"/>
+                    <text x="300" y="400" text-anchor="middle" fill="#667eea" font-size="9">Continue processing</text>
+                    
+                    <!-- Arrow marker -->
+                    <defs>
+                        <marker id="arrow3" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+                            <path d="M0,0 L0,6 L9,3 z" fill="#667eea" />
+                        </marker>
+                    </defs>
+                </svg>
+            </div>
+            
+            <div class="flow-box">
+                <h4>Error Handling Strategy:</h4>
+                <ul>
+                    <li><strong>Retry with Backoff:</strong> Transient failures retried with exponential delays</li>
+                    <li><strong>Graceful Degradation:</strong> System continues even if specialists fail</li>
+                    <li><strong>Fallback Responses:</strong> User-friendly messages instead of crashes</li>
+                    <li><strong>Comprehensive Logging:</strong> All errors logged for debugging</li>
+                </ul>
+            </div>
+            
+            <a href="index.html" class="back-link">← Back to Documentation Home</a>
+        </div>
+    </div>
+</body>
+</html>
