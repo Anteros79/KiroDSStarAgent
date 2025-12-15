@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 # Import tool decorator from strands
 try:
     from strands import tool, Agent
-    from strands_bedrock import BedrockModel
+    from strands.models.bedrock import BedrockModel
 except ImportError:
     # Fallback for testing without strands installed
     def tool(func):

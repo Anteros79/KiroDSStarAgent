@@ -17,4 +17,22 @@ export default defineConfig({
       },
     },
   },
+  resolve: {
+    alias: {
+      // Polyfill buffer for plotly.js
+      buffer: 'buffer/',
+    },
+  },
+  optimizeDeps: {
+    include: ['buffer'],
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          plotly: ['plotly.js', 'react-plotly.js'],
+        },
+      },
+    },
+  },
 })

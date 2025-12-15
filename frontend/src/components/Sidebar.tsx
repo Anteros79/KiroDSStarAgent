@@ -1,4 +1,4 @@
-import { BarChart3, Brain, Sparkles, History, Trash2 } from 'lucide-react'
+import { BarChart3, Brain, Sparkles, Trash2 } from 'lucide-react'
 import './Sidebar.css'
 
 interface SidebarProps {

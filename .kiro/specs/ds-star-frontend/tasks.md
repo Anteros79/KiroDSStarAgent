@@ -1,0 +1,265 @@
+# Implementation Plan: DS-STAR Workbench Frontend
+
+- [x] 1. Set up enhanced project structure and dependencies
+  - [x] 1.1 Install additional UI dependencies
+    - Add Tailwind CSS for utility-first styling
+    - Add @radix-ui/react primitives for accessible components
+    - Add react-syntax-highlighter for code display
+    - Add framer-motion for animations
+    - _Requirements: 12.1, 12.5, 13.1_
+  - [x] 1.2 Configure Tailwind with custom theme
+    - Set up tailwind.config.js with color palette from design
+    - Configure dark theme variables
+    - Add custom component classes
+    - _Requirements: 12.1, 12.2, 12.3, 12.4_
+  - [x] 1.3 Create base CSS variables and global styles
+    - Define CSS custom properties for colors, spacing, typography
+    - Set up font imports (Inter or similar sans-serif)
+    - Create utility classes for common patterns
+    - _Requirements: 12.4_
+
+- [x] 2. Implement Application Shell
+  - [x] 2.1 Create new App layout structure
+    - Refactor App.tsx with three-column layout (sidebar, main, optional right panel)
+    - Implement responsive breakpoints for mobile/tablet/desktop
+    - Add CSS Grid or Flexbox layout system
+    - _Requirements: 1.1, 1.2, 1.3, 1.4_
+  - [x] 2.2 Create enhanced Header component
+    - Add DS-STAR logo/icon with brand styling
+    - Display "DS-STAR Workbench" title and "Iterative Agentic Data Science Workflow" subtitle
+    - Add connection status indicator (green dot when connected)
+    - Add settings/menu button for future features
+    - _Requirements: 1.1, 11.5_
+  - [x] 2.3 Create loading and error states
+    - Design loading spinner with "Initializing DS-Star System..." message
+    - Create error state component with retry button
+    - Add skeleton loaders for content areas
+    - _Requirements: 1.5_
+
+- [x] 3. Implement Sidebar Components
+  - [x] 3.1 Create ActiveDatasetPanel component
+    - Display dataset filename with database icon (lucide-react)
+    - Show dataset description text
+    - Render column names as pill/tag components
+    - Add tooltip on column hover showing data type
+    - Create empty state with upload prompt
+    - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5_
+  - [x] 3.2 Create ResearchGoalPanel component
+    - Build auto-resizing textarea for research goal input
+    - Create "Start Analysis" button with play icon and loading state
+    - Add "Explore New Measure" secondary button
+    - Implement disabled state during analysis
+    - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6_
+  - [x] 3.3 Assemble Sidebar layout
+    - Combine ActiveDatasetPanel and ResearchGoalPanel
+    - Add proper spacing and dividers
+    - Implement collapsible drawer for mobile
+    - _Requirements: 1.2, 1.4_
+
+- [x] 4. Implement Analysis Timeline Components
+  - [x] 4.1 Create AnalysisTimeline container
+    - Build timeline header with step counter ("X Steps")
+    - Create scrollable container for step cards
+    - Add empty state when no analysis has run
+    - _Requirements: 4.1_
+  - [x] 4.2 Create StepCard component
+    - Build collapsible card with "STEP X DETAILS" header
+    - Add expand/collapse chevron icon and animation
+    - Display step status indicator (pending/running/completed)
+    - Container for iteration cards
+    - _Requirements: 4.2, 4.3_
+  - [x] 4.3 Create IterationCard component
+    - Display iteration number and timestamp ("ITERATION 1 10:49:35 AM")
+    - Show iteration description/goal as heading
+    - Add "Verified" or "Failed" badge with appropriate styling
+    - Container for code, output, chart, and verifier sections
+    - _Requirements: 4.4, 4.5, 4.6, 5.1_
+
+- [x] 5. Implement Content Display Components
+  - [x] 5.1 Create CodeDisplay component
+    - Integrate react-syntax-highlighter with Python language support
+    - Add line numbers display
+    - Create copy-to-clipboard button with hover reveal
+    - Implement collapsible view for long code (>15 lines)
+    - Add "Show more/less" toggle
+    - Style with dark theme matching mockup
+    - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
+  - [x] 5.2 Create ExecutionOutput component
+    - Render output in monospace font
+    - Format tabular data with aligned columns
+    - Highlight errors in red, warnings in yellow
+    - Add loading placeholder with pulse animation
+    - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5_
+  - [x] 5.3 Enhance ChartDisplay component
+    - Integrate react-plotly.js for interactive charts
+    - Enable zoom, pan, and hover interactions
+    - Display chart title and legend
+    - Add export button for PNG/SVG download
+    - Handle loading and error states
+    - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5_
+  - [x] 5.4 Create VerifierAssessment component
+    - Display assessment text with sparkle/star icon
+    - Create "Approve & Continue" button (green, filled)
+    - Create "Decline & Refine" button (red, outlined)
+    - Add click handlers for approval/decline actions
+    - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5_
+
+- [x] 6. Implement API and WebSocket Services
+  - [x] 6.1 Create APIService module
+    - Implement fetchStatus() for GET /api/status
+    - Implement startAnalysis() for POST /api/analyze
+    - Implement getAnalysis() for GET /api/analysis/:id
+    - Add error handling with user-friendly messages
+    - Add retry logic for failed requests
+    - _Requirements: 11.1, 11.2, 11.4_
+  - [x] 6.2 Create WebSocketService module
+    - Implement connect() with auto-reconnection
+    - Handle incoming events (code_generated, execution_complete, etc.)
+    - Implement send methods for client events
+    - Add connection state management
+    - Handle disconnection with reconnect UI
+    - _Requirements: 10.1, 10.5, 11.3_
+  - [x] 6.3 Create React hooks for services
+    - useAnalysis() hook for analysis state management
+    - useWebSocket() hook for real-time updates
+    - useDataset() hook for dataset information
+    - _Requirements: 10.2_
+
+- [x] 7. Implement Real-time Streaming UI
+  - [x] 7.1 Add streaming state management
+    - Create context/store for analysis state
+    - Handle incremental updates from WebSocket
+    - Manage step and iteration state transitions
+    - _Requirements: 10.2_
+  - [x] 7.2 Create typing animation for code generation
+    - Implement character-by-character reveal animation
+    - Add cursor blink effect
+    - Handle streaming code chunks
+    - _Requirements: 10.3_
+  - [x] 7.3 Create execution progress indicator
+    - Build spinner component with "Executing..." text
+    - Add progress stages (parsing, running, formatting)
+    - Smooth transition to results
+    - _Requirements: 10.4_
+
+- [x] 8. Implement User Interactions
+  - [x] 8.1 Create refinement dialog
+    - Build modal/dialog for "Decline & Refine" action
+    - Add textarea for user feedback
+    - Include "Submit Refinement" and "Cancel" buttons
+    - _Requirements: 9.5_
+  - [x] 8.2 Add keyboard navigation
+    - Implement Tab navigation for all interactive elements
+    - Add Enter/Space activation for buttons
+    - Add Escape to close dialogs
+    - _Requirements: 13.4_
+  - [x] 8.3 Add focus management
+    - Implement visible focus indicators
+    - Manage focus when dialogs open/close
+    - Trap focus within modals
+    - _Requirements: 13.1_
+
+- [x] 9. Implement Backend API Endpoints
+  - [x] 9.1 Create FastAPI server structure
+    - Set up src/api/server.py with FastAPI app
+    - Configure CORS for frontend development
+    - Add health check endpoint
+    - _Requirements: 11.1_
+  - [x] 9.2 Implement REST endpoints
+    - GET /api/status - return system status and dataset info
+    - POST /api/analyze - start new analysis
+    - GET /api/analysis/:id - get analysis state
+    - _Requirements: 11.1, 11.2_
+  - [x] 9.3 Implement WebSocket endpoint
+    - Create /ws/stream WebSocket route
+    - Integrate with orchestrator for real-time events
+    - Broadcast events to connected clients
+    - _Requirements: 11.3_
+
+- [x] 10. Polish and Accessibility
+  - [x] 10.1 Add animations and transitions
+    - Implement smooth expand/collapse for cards
+    - Add fade-in for new content
+    - Create button hover/active states
+    - _Requirements: 12.5_
+  - [x] 10.2 Implement accessibility features
+    - Add aria-labels to icons and buttons
+    - Ensure color contrast meets WCAG AA
+    - Add screen reader announcements for status changes
+    - Test with keyboard-only navigation
+    - _Requirements: 13.1, 13.2, 13.3, 13.4, 13.5_
+  - [ ] 10.3 Add responsive design refinements
+    - Test and fix mobile layout issues
+    - Optimize touch targets for mobile
+    - Add swipe gestures for sidebar on mobile
+    - _Requirements: 1.4_
+
+- [ ] 11. Testing and Documentation
+  - [ ]* 11.1 Write component unit tests
+    - Test ActiveDatasetPanel rendering
+    - Test ResearchGoalPanel interactions
+    - Test CodeDisplay copy functionality
+    - Test VerifierAssessment button actions
+  - [ ]* 11.2 Write integration tests
+    - Test full analysis workflow
+    - Test WebSocket event handling
+    - Test error recovery scenarios
+  - [x] 11.3 Update README with frontend instructions
+    - Add frontend setup instructions
+    - Document available npm scripts
+    - Add screenshots of the UI
+    - _Requirements: N/A (documentation)_
+
+- [x] 12. Investigation Workflow Enhancement
+  - [x] 12.1 Create Investigation types and state management
+    - Define Investigation, InvestigationStep, StepIteration types
+    - Create useInvestigation hook with reducer pattern
+    - Handle WebSocket events for real-time updates
+    - _Requirements: 4.1, 4.2, 10.2_
+  - [x] 12.2 Create InvestigationWorkbench component
+    - Replace AnalysisTimeline with new workbench
+    - Display hypothesis and measure name header
+    - Show dataset info badge
+    - _Requirements: 1.1, 4.1_
+  - [x] 12.3 Create StepSlider component
+    - Navigation between investigation steps
+    - Visual indicators for step status (approved/declined/pending)
+    - Progress bar showing completion
+    - _Requirements: 4.2, 4.3_
+  - [x] 12.4 Create NotesPanel component
+    - Running notes textarea
+    - Final analysis and conclusion fields
+    - Save functionality
+    - _Requirements: 9.1_
+  - [x] 12.5 Implement Approve & Continue workflow
+    - Connect approve button to backend
+    - Move to next step after approval
+    - Link approved iterations to next step
+    - _Requirements: 9.3, 9.4_
+  - [x] 12.6 Implement Decline & Refine workflow
+    - Prompt for feedback on decline
+    - Trigger new iteration with feedback context
+    - Backend re-analysis with feedback
+    - _Requirements: 9.5_
+  - [x] 12.7 Update App.tsx to use InvestigationWorkbench
+    - Remove old AnalysisTimeline usage
+    - Pass measure name and dataset to workbench
+    - _Requirements: 1.1_
+
+- [ ] 13. Final Integration
+  - [ ] 13.1 Connect frontend to backend
+    - Update API base URL configuration
+    - Test end-to-end with real backend
+    - Fix any integration issues
+    - _Requirements: 11.1, 11.2, 11.3_
+  - [ ] 13.2 Performance optimization
+    - Add React.memo for expensive components
+    - Implement virtualization for long timelines
+    - Optimize re-renders during streaming
+    - _Requirements: N/A (performance)_
+  - [ ] 13.3 Final visual polish
+    - Review all components against mockup
+    - Fix spacing and alignment issues
+    - Ensure consistent styling throughout
+    - _Requirements: 12.1, 12.2, 12.3, 12.4_
+

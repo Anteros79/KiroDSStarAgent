@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 # Import Strands components
 try:
     from strands import Agent
-    from strands_bedrock import BedrockModel
+    from strands.models.bedrock import BedrockModel
 except ImportError:
     # Fallback for testing without strands installed
     class Agent:

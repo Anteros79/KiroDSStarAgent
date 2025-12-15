@@ -1,6 +1,6 @@
 # DS-Star Multi-Agent System
 
-Implementation of Google's DS-Star (Data Science Star) multi-agent framework using the AWS Strands Agents SDK with Amazon Nova Lite.
+Implementation of Google's DS-Star (Data Science Star) multi-agent framework using the AWS Strands Agents SDK. Supports both local Ollama models (default) and Amazon Bedrock.
 
 ## Overview
 
@@ -99,36 +99,73 @@ This generates `data/airline_operations.csv` with 1000+ flight records including
 - Various routes and time periods
 - KPIs: on-time performance, delay causes, load factor, turnaround time, cancellations
 
-### 3. Configure AWS Credentials
+### 3. Configure Model Provider
 
-The system requires AWS Bedrock access. Configure credentials using one of these methods:
+The system supports two model providers:
 
-**Option A: Environment Variables**
+- **Ollama** (default): Run models locally using [Ollama](https://ollama.ai/)
+- **Bedrock**: Use Amazon Bedrock with AWS credentials
+
+#### Option A: Local Ollama (Default)
+
+1. Install Ollama from https://ollama.ai/
+2. Pull a model (e.g., Gemma 3 4B - default, faster on CPU):
+   ```bash
+   ollama pull gemma3:4b
+   ```
+   Or for better quality with more resources:
+   ```bash
+   ollama pull gemma3:27b
+   ```
+3. Start Ollama server (usually runs automatically)
+4. Run DS-Star - it will use Ollama by default
+
+#### Option B: Amazon Bedrock
+
+Configure AWS credentials and set the model provider:
 
 ```bash
 cp .env.example .env
 # Edit .env with your credentials
 ```
 
-Required:
-- `AWS_REGION`: AWS region (default: us-west-2)
+Set `DS_STAR_MODEL_PROVIDER=bedrock` and configure AWS credentials.
 
-Optional configuration:
-- `DS_STAR_MODEL_ID`: Model identifier (default: us.amazon.nova-lite-v1:0)
-- `DS_STAR_VERBOSE`: Enable verbose mode (true/false)
-- `DS_STAR_MAX_TOKENS`: Maximum tokens (default: 4096)
-- `DS_STAR_TEMPERATURE`: Model temperature (default: 0.3)
-- `DS_STAR_OUTPUT_DIR`: Output directory (default: ./output)
-- `DS_STAR_DATA_PATH`: Data file path (default: ./data/airline_operations.csv)
-- `DS_STAR_RETRY_ATTEMPTS`: Retry attempts (default: 3)
-- `DS_STAR_RETRY_DELAY_BASE`: Base retry delay in seconds (default: 1.0)
+#### Environment Variables
 
-**Option B: Configuration File**
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DS_STAR_MODEL_PROVIDER` | `ollama` | Model provider: `ollama` or `bedrock` |
+| `DS_STAR_MODEL_ID` | `gemma3:4b` | Model identifier (e.g., `gemma3:4b` for Ollama, `us.amazon.nova-lite-v1:0` for Bedrock) |
+| `DS_STAR_OLLAMA_HOST` | `http://localhost:11434` | Ollama server URL |
+| `AWS_REGION` | `us-west-2` | AWS region for Bedrock |
+| `DS_STAR_VERBOSE` | `false` | Enable verbose mode |
+| `DS_STAR_MAX_TOKENS` | `4096` | Maximum tokens for responses |
+| `DS_STAR_TEMPERATURE` | `0.3` | Model temperature (0.0-1.0) |
+| `DS_STAR_OUTPUT_DIR` | `./output` | Output directory for charts |
+| `DS_STAR_DATA_PATH` | `./data/airline_operations.csv` | Path to dataset |
+| `DS_STAR_RETRY_ATTEMPTS` | `3` | Retry attempts for API failures |
+| `DS_STAR_RETRY_DELAY_BASE` | `1.0` | Base delay for exponential backoff |
+
+#### Configuration File
 
 Create a `config.yaml` or `config.json` file:
 
 ```yaml
-# config.yaml
+# config.yaml - Using Ollama (default)
+model_provider: ollama
+model_id: gemma3:4b  # Use gemma3:27b for better quality
+ollama_host: http://localhost:11434
+verbose: false
+max_tokens: 4096
+temperature: 0.3
+output_dir: ./output
+data_path: ./data/airline_operations.csv
+```
+
+```yaml
+# config.yaml - Using Bedrock
+model_provider: bedrock
 model_id: us.amazon.nova-lite-v1:0
 region: us-west-2
 verbose: false
@@ -136,8 +173,6 @@ max_tokens: 4096
 temperature: 0.3
 output_dir: ./output
 data_path: ./data/airline_operations.csv
-retry_attempts: 3
-retry_delay_base: 1.0
 ```
 
 Then run with: `python src/main.py --config config.yaml`
@@ -155,8 +190,8 @@ python src/main.py
 ```
 
 The system will:
-1. Validate configuration and AWS credentials
-2. Initialize the Bedrock model and specialist agents
+1. Validate configuration and model provider connection (Ollama or Bedrock)
+2. Initialize the model and specialist agents
 3. Display a ready prompt for queries
 
 Example session:
@@ -183,8 +218,11 @@ python src/main.py --verbose
 # Use a specific configuration file
 python src/main.py --config config.yaml
 
-# Use a different model
-python src/main.py --model us.amazon.nova-pro-v1:0
+# Use a different model (Ollama)
+python src/main.py --model gemma3:27b
+
+# Use Bedrock instead of Ollama
+python src/main.py --provider bedrock --model us.amazon.nova-lite-v1:0
 
 # Use a different region
 python src/main.py --region us-east-1
@@ -212,6 +250,121 @@ python demo/run_demo.py --verbose --auto
 ```
 
 See `demo/README.md` for detailed demo documentation and `demo/sample_queries.md` for example queries.
+
+## Frontend UI
+
+The system includes a modern React-based Investigation Workbench for interactive data science exploration.
+
+### Features
+
+- **Investigation Workflow**: Start with a hypothesis (e.g., "Why is On-Time Performance signaling?") and iteratively explore
+- **Step-by-Step Analysis**: Each analysis step shows generated code, formatted responses, and visualizations
+- **Interactive Charts**: Plotly-based charts with zoom, pan, and export capabilities
+- **Approve/Decline Flow**: Review each step's results and either approve to continue or decline with feedback for refinement
+- **Step Navigation**: Slider to navigate between investigation steps and track progress
+- **Notes & Analysis**: Running notes panel with final analysis and conclusion fields
+- **Real-time Streaming**: WebSocket-based updates show analysis progress in real-time
+
+### Running the Frontend
+
+```bash
+# Terminal 1: Start the backend
+python -m uvicorn src.api.server:app --host 0.0.0.0 --port 8000
+
+# Terminal 2: Start the frontend
+cd frontend
+npm install  # First time only
+npm run dev
+```
+
+Open http://localhost:3000 to access the Investigation Workbench.
+
+### Frontend Tech Stack
+
+- **React 18** with TypeScript
+- **Tailwind CSS v4** for styling
+- **Plotly.js** for interactive charts
+- **React Markdown** for formatted agent responses
+- **Lucide React** for icons
+- **WebSocket** for real-time updates
+
+## Web API
+
+The system includes a FastAPI-based web server for programmatic access and frontend integration.
+
+### Starting the API Server
+
+```bash
+python -m uvicorn src.api.server:app --host 0.0.0.0 --port 8000
+```
+
+### REST Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/health` | GET | Health check |
+| `/api/status` | GET | System status with dataset info |
+| `/api/query` | POST | Process a query (synchronous) |
+| `/api/history` | GET | Get conversation history |
+| `/api/history` | DELETE | Clear conversation history |
+
+### API Response Models
+
+**GET /api/status** returns:
+```json
+{
+  "status": "ready",
+  "model": "us.amazon.nova-lite-v1:0",
+  "region": "us-west-2",
+  "specialists": ["data_analyst", "ml_engineer", "visualization_expert"],
+  "data_loaded": true,
+  "dataset_info": {
+    "filename": "airline_operations.csv",
+    "description": "Airline operational data...",
+    "columns": [{"name": "flight_id", "dtype": "int64"}, ...],
+    "rowCount": 1000
+  }
+}
+```
+
+**POST /api/query** accepts:
+```json
+{
+  "query": "Calculate on-time performance by airline",
+  "context": {}
+}
+```
+
+### WebSocket Streaming
+
+Connect to `/ws/query` for real-time streaming of agent reasoning, tool calls, and results. Events include: `query_start`, `agent_start`, `routing`, `tool_start`, `tool_end`, `agent_end`, `response`, `error`.
+
+### WebSocket Workbench Streaming
+
+Connect to `/ws/stream` for the Investigation Workbench UI with iterative analysis workflow:
+
+**Client → Server Events:**
+| Event | Description |
+|-------|-------------|
+| `start_analysis` | Start a new analysis with `research_goal` |
+| `approve_step` | Approve a step and continue to next |
+| `refine_step` | Request refinement with feedback |
+
+**Server → Client Events:**
+| Event | Description |
+|-------|-------------|
+| `analysis_started` | Analysis initialized with ID |
+| `step_started` | New step began |
+| `iteration_started` | New iteration within a step |
+| `code_generated` | Python code generated for analysis |
+| `execution_complete` | Code execution finished with output |
+| `visualization_ready` | Chart data ready for display |
+| `verification_complete` | Verifier assessment complete |
+| `step_completed` | Step finished |
+| `step_approved` | Step was approved by user |
+| `refinement_started` | Refinement iteration began |
+| `analysis_completed` | Full analysis workflow complete |
+| `error` | Error occurred during processing |
 
 ## Architecture
 
@@ -271,8 +424,9 @@ See `demo/sample_queries.md` for more examples with expected routing behavior.
 ## Requirements
 
 - Python >= 3.9
-- AWS Bedrock access with Amazon Nova Lite model
-- AWS credentials configured (via environment variables or AWS CLI)
+- One of the following model providers:
+  - **Ollama** (default): Local installation of [Ollama](https://ollama.ai/) with a compatible model (e.g., `gemma3:27b`)
+  - **Bedrock**: AWS Bedrock access with Amazon Nova Lite model and configured AWS credentials
 - See `requirements.txt` for full dependency list
 
 ## Testing
@@ -339,10 +493,15 @@ All tests are designed to run without AWS Bedrock access. The mock configuration
 
 **"Error: strands-agents package not installed"**
 ```bash
-pip install strands-agents strands-agents-tools
+pip install strands-agents strands-agents-tools ollama
 ```
 
-**"Failed to validate AWS Bedrock credentials"**
+**"Failed to connect to Ollama"**
+- Ensure Ollama is installed and running (`ollama serve`)
+- Verify the model is pulled (`ollama pull gemma3:27b`)
+- Check `DS_STAR_OLLAMA_HOST` if using a non-default URL
+
+**"Failed to validate AWS Bedrock credentials"** (when using Bedrock)
 - Ensure AWS credentials are configured
 - Verify your region supports Amazon Nova models
 - Check IAM permissions for Bedrock access

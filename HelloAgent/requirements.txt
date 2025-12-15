@@ -1,0 +1,5 @@
+strands-agents>=1.13.0
+strands-agents-tools>=0.2.16
+bedrock-agentcore>=1.0.3
+python-dotenv>=1.2.1
+boto3>=1.42.1

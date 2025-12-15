@@ -26,10 +26,11 @@ from src.data.airline_data import initialize_data_loader
 
 # Import Strands components
 try:
-    from strands_bedrock import BedrockModel
+    from strands.models.bedrock import BedrockModel
+    from strands.models.ollama import OllamaModel
 except ImportError:
     print("Error: strands-agents package not installed.")
-    print("Please install with: pip install strands-agents strands-agents-tools")
+    print("Please install with: pip install strands-agents strands-agents-tools ollama")
     sys.exit(1)
 
 # Configure logging
@@ -132,15 +133,23 @@ class DSStarCLI:
             self.stream_handler = InvestigationStreamHandler(verbose=self.config.verbose)
             logger.info("Investigation stream handler initialized")
             
-            # Initialize Bedrock model
-            logger.info("Connecting to Amazon Bedrock...")
-            model = BedrockModel(
-                model_id=self.config.model_id,
-                region=self.config.region,
-                max_tokens=self.config.max_tokens,
-                temperature=self.config.temperature
-            )
-            logger.info(f"Bedrock model initialized: {self.config.model_id}")
+            # Initialize model based on provider
+            if self.config.model_provider == "ollama":
+                logger.info(f"Connecting to Ollama at {self.config.ollama_host}...")
+                model = OllamaModel(
+                    model_id=self.config.model_id,
+                    host=self.config.ollama_host,
+                )
+                logger.info(f"Ollama model initialized: {self.config.model_id}")
+            else:
+                logger.info("Connecting to Amazon Bedrock...")
+                model = BedrockModel(
+                    model_id=self.config.model_id,
+                    region=self.config.region,
+                    max_tokens=self.config.max_tokens,
+                    temperature=self.config.temperature
+                )
+                logger.info(f"Bedrock model initialized: {self.config.model_id}")
             
             # Create specialist agents dictionary
             specialists = {
@@ -175,37 +184,47 @@ class DSStarCLI:
             True if credentials are valid, False otherwise
         """
         try:
-            logger.info("Validating Amazon Bedrock credentials...")
-            
-            # Check for required environment variables
-            aws_region = os.getenv("AWS_REGION") or os.getenv("DS_STAR_REGION")
-            
-            # Check if AWS credentials are available
-            # The BedrockModel will use boto3's credential chain
-            # which checks: env vars, ~/.aws/credentials, IAM roles, etc.
-            
-            if not aws_region:
-                logger.warning("AWS_REGION not set, using default from config")
-            
-            # Try to create a test model instance to validate credentials
-            # This will fail fast if credentials are invalid
-            test_model = BedrockModel(
-                model_id=self.config.model_id,
-                region=self.config.region,
-                max_tokens=100,
-                temperature=0.3
-            )
-            
-            logger.info("✓ Bedrock credentials validated successfully")
-            return True
+            if self.config.model_provider == "ollama":
+                logger.info(f"Validating Ollama connection at {self.config.ollama_host}...")
+                # For Ollama, just try to create the model - it will fail if server is not running
+                test_model = OllamaModel(
+                    model_id=self.config.model_id,
+                    host=self.config.ollama_host,
+                )
+                logger.info("✓ Ollama connection validated successfully")
+                return True
+            else:
+                logger.info("Validating Amazon Bedrock credentials...")
+                
+                # Check for required environment variables
+                aws_region = os.getenv("AWS_REGION") or os.getenv("DS_STAR_REGION")
+                
+                if not aws_region:
+                    logger.warning("AWS_REGION not set, using default from config")
+                
+                # Try to create a test model instance to validate credentials
+                test_model = BedrockModel(
+                    model_id=self.config.model_id,
+                    region=self.config.region,
+                    max_tokens=100,
+                    temperature=0.3
+                )
+                
+                logger.info("✓ Bedrock credentials validated successfully")
+                return True
             
         except Exception as e:
             logger.error(f"✗ Credential validation failed: {e}")
-            logger.error("Please ensure you have valid AWS credentials configured.")
-            logger.error("You can set credentials via:")
-            logger.error("  1. Environment variables: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY")
-            logger.error("  2. AWS credentials file: ~/.aws/credentials")
-            logger.error("  3. IAM role (if running on AWS)")
+            if self.config.model_provider == "ollama":
+                logger.error("Please ensure Ollama is running and the model is available.")
+                logger.error(f"  1. Start Ollama: ollama serve")
+                logger.error(f"  2. Pull model: ollama pull {self.config.model_id}")
+            else:
+                logger.error("Please ensure you have valid AWS credentials configured.")
+                logger.error("You can set credentials via:")
+                logger.error("  1. Environment variables: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY")
+                logger.error("  2. AWS credentials file: ~/.aws/credentials")
+                logger.error("  3. IAM role (if running on AWS)")
             return False
     
     def display_welcome(self) -> None:

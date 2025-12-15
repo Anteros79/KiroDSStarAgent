@@ -1,11 +1,86 @@
+// Model provider options
+export type ModelProvider = 'ollama' | 'bedrock'
+
+export interface ModelConfig {
+  provider: ModelProvider
+  model_id: string
+  host?: string  // For Ollama
+  region?: string  // For Bedrock
+}
+
+// System status
 export interface SystemStatus {
-  status: string
+  status: 'ready' | 'initializing' | 'error'
   model: string
   region: string
   specialists: string[]
   data_loaded: boolean
+  dataset_info?: DatasetInfo
 }
 
+// Dataset information
+export interface DatasetInfo {
+  filename: string
+  description: string
+  columns: ColumnInfo[]
+  rowCount: number
+}
+
+export interface ColumnInfo {
+  name: string
+  dtype: string
+}
+
+// Analysis state
+export interface AnalysisState {
+  id: string
+  researchGoal: string
+  dataset: DatasetInfo
+  steps: AnalysisStep[]
+  status: 'idle' | 'running' | 'completed' | 'error'
+  startedAt: Date
+  completedAt?: Date
+}
+
+export interface AnalysisStep {
+  id: string
+  stepNumber: number
+  iterations: Iteration[]
+  status: 'pending' | 'running' | 'completed'
+}
+
+export interface Iteration {
+  id: string
+  iterationNumber: number
+  timestamp: Date
+  description: string
+  generatedCode: string
+  executionOutput: ExecutionResult
+  visualization?: ChartSpec
+  verification: VerificationResult
+  status: 'pending' | 'generating' | 'executing' | 'verifying' | 'verified' | 'failed'
+}
+
+export interface ExecutionResult {
+  success: boolean
+  output: string
+  error?: string
+  duration_ms: number
+}
+
+export interface ChartSpec {
+  chart_type: string
+  title: string
+  plotly_json: any
+}
+
+export interface VerificationResult {
+  passed: boolean
+  assessment: string
+  suggestions?: string[]
+}
+
+// Legacy types for backward compatibility
 export interface Message {
   id: string
   role: 'user' | 'assistant' | 'system'
@@ -39,14 +114,36 @@ export interface AxisConfig {
   type?: string
 }
 
-export interface QueryRequest {
-  query: string
-  context?: Record<string, any>
+// WebSocket events
+export interface WSEvent {
+  type: string
+  data: any
 }
 
-export interface QueryResponse {
-  response: string
-  routing: string[]
-  execution_time_ms: number
-  charts?: ChartData[]
+export interface CodeGeneratedEvent {
+  type: 'code_generated'
+  step_id: string
+  iteration_id: string
+  code: string
+}
+
+export interface ExecutionCompleteEvent {
+  type: 'execution_complete'
+  step_id: string
+  iteration_id: string
+  output: ExecutionResult
+}
+
+export interface VisualizationReadyEvent {
+  type: 'visualization_ready'
+  step_id: string
+  iteration_id: string
+  chart: ChartSpec
+}
+
+export interface VerificationCompleteEvent {
+  type: 'verification_complete'
+  step_id: string
+  iteration_id: string
+  result: VerificationResult
 }

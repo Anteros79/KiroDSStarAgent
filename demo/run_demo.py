@@ -24,7 +24,7 @@ from src.agents.specialists.ml_engineer import ml_engineer
 from src.agents.specialists.visualization_expert import visualization_expert
 
 try:
-    from strands_bedrock import BedrockModel
+    from strands.models.bedrock import BedrockModel
 except ImportError:
     print("Error: strands-agents package not installed.")
     print("Please install with: pip install strands-agents strands-agents-tools")

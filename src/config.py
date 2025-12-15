@@ -17,7 +17,9 @@ class Config:
     """Configuration for DS-Star multi-agent system.
     
     Attributes:
-        model_id: Amazon Bedrock model identifier
+        model_provider: Model provider ("ollama" or "bedrock")
+        model_id: Model identifier (e.g., "gemma3:27b" for Ollama, "us.amazon.nova-lite-v1:0" for Bedrock)
+        ollama_host: Ollama server URL (default: http://localhost:11434)
         region: AWS region for Bedrock API
         verbose: Enable detailed logging and investigation stream output
         max_tokens: Maximum tokens for model responses
@@ -28,7 +30,9 @@ class Config:
         retry_delay_base: Base delay in seconds for exponential backoff
     """
     
-    model_id: str = "us.amazon.nova-lite-v1:0"
+    model_provider: str = "ollama"  # "ollama" or "bedrock"
+    model_id: str = "gemma3:4b"  # Default to local Ollama Gemma 3 4B (faster on CPU)
+    ollama_host: str = "http://localhost:11434"
     region: str = "us-west-2"
     verbose: bool = False
     max_tokens: int = 4096
@@ -43,7 +47,9 @@ class Config:
         """Load configuration from environment variables.
         
         Environment variables:
-            DS_STAR_MODEL_ID: Model identifier (default: us.amazon.nova-lite-v1:0)
+            DS_STAR_MODEL_PROVIDER: Model provider ("ollama" or "bedrock", default: ollama)
+            DS_STAR_MODEL_ID: Model identifier (default: gemma3:27b for ollama)
+            DS_STAR_OLLAMA_HOST: Ollama server URL (default: http://localhost:11434)
             DS_STAR_REGION or AWS_REGION: AWS region (default: us-west-2)
             DS_STAR_VERBOSE: Enable verbose mode (default: False)
             DS_STAR_MAX_TOKENS: Maximum tokens (default: 4096)
@@ -58,9 +64,17 @@ class Config:
         """
         config = cls()
         
+        # Load model provider
+        if model_provider := os.getenv("DS_STAR_MODEL_PROVIDER"):
+            config.model_provider = model_provider.lower()
+        
         # Load each field from environment with validation
         if model_id := os.getenv("DS_STAR_MODEL_ID"):
             config.model_id = model_id
+        
+        # Ollama host
+        if ollama_host := os.getenv("DS_STAR_OLLAMA_HOST"):
+            config.ollama_host = ollama_host
         
         # Check both DS_STAR_REGION and AWS_REGION
         if region := os.getenv("DS_STAR_REGION") or os.getenv("AWS_REGION"):
@@ -145,8 +159,14 @@ class Config:
             config = cls()
             
             # Update fields from file data with validation
+            if "model_provider" in data:
+                config.model_provider = str(data["model_provider"]).lower()
+            
             if "model_id" in data:
                 config.model_id = str(data["model_id"])
+            
+            if "ollama_host" in data:
+                config.ollama_host = str(data["ollama_host"])
             
             if "region" in data:
                 config.region = str(data["region"])
@@ -226,8 +246,12 @@ class Config:
         # Merge: only override if env var was explicitly set (differs from default)
         default_config = cls()
         
+        if env_config.model_provider != default_config.model_provider:
+            config.model_provider = env_config.model_provider
         if env_config.model_id != default_config.model_id:
             config.model_id = env_config.model_id
+        if env_config.ollama_host != default_config.ollama_host:
+            config.ollama_host = env_config.ollama_host
         if env_config.region != default_config.region:
             config.region = env_config.region
         if env_config.verbose != default_config.verbose:
