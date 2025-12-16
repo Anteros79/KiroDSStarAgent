@@ -2,6 +2,15 @@ import { WSEvent } from '../types'
 
 type EventHandler = (event: WSEvent) => void
 
+export type StartAnalysisOptions = {
+  investigation_id?: string
+  kpi_id?: string
+  station?: string
+  window?: 'weekly' | 'daily'
+  point_t?: string
+  max_iterations?: number
+}
+
 class WebSocketService {
   private ws: WebSocket | null = null
   private handlers: Set<EventHandler> = new Set()
@@ -97,8 +106,11 @@ class WebSocketService {
     }
   }
 
-  startAnalysis(researchGoal: string) {
-    this.send({ type: 'start_analysis', data: { research_goal: researchGoal } })
+  startAnalysis(researchGoal: string, options?: StartAnalysisOptions) {
+    this.send({
+      type: 'start_analysis',
+      data: { research_goal: researchGoal, ...(options || {}) },
+    })
   }
 
   approveStep(stepId: string, iterationId: string) {

@@ -131,6 +131,105 @@ def generate_chart_from_response(response_text: str, query: str) -> Optional[Dic
     
     return None
 
+
+def generate_techops_kpi_chart(*, kpi_id: str, station: str, window: str, point_t: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    """Generate a Plotly chart from Tech Ops KPI time series (station vs fleet average)."""
+    try:
+        store = get_techops_store()
+        series_map = store.get_weekly_series(station=station, weeks=53) if window == "weekly" else store.get_daily_series(station=station, days=30)
+        if kpi_id not in series_map:
+            return None
+        s = series_map[kpi_id]
+
+        # Fleet average across known stations for the same window
+        stations = getattr(store, "stations", []) or ["DAL", "PHX", "HOU"]
+        fleet_series = []
+        for st in stations:
+            try:
+                sm = store.get_weekly_series(station=st, weeks=53) if window == "weekly" else store.get_daily_series(station=st, days=30)
+                if kpi_id in sm:
+                    fleet_series.append(sm[kpi_id])
+            except Exception:
+                continue
+
+        t_list = [p.t for p in s.points]
+        station_vals = [p.value for p in s.points]
+
+        fleet_vals = None
+        if fleet_series:
+            # average by aligned index (deterministic store produces aligned time windows)
+            n = len(t_list)
+            acc = [0.0] * n
+            cnt = [0] * n
+            for fs in fleet_series:
+                for idx, p in enumerate(fs.points[:n]):
+                    acc[idx] += float(p.value)
+                    cnt[idx] += 1
+            fleet_vals = [(acc[i] / cnt[i]) if cnt[i] else None for i in range(n)]
+
+        label = s.kpi.label
+        unit = s.kpi.unit
+        title = f"{label} - {station} ({window})"
+
+        highlight_idx = None
+        if point_t and point_t in t_list:
+            highlight_idx = t_list.index(point_t)
+
+        plotly_json: Dict[str, Any] = {
+            "data": [
+                {
+                    "type": "scatter",
+                    "mode": "lines+markers",
+                    "name": station,
+                    "x": t_list,
+                    "y": station_vals,
+                    "line": {"color": "#2563EB", "width": 3},
+                    "marker": {"size": 6, "color": "#2563EB"},
+                    "hovertemplate": "%{x}<br>%{y}<extra></extra>",
+                }
+            ],
+            "layout": {
+                "title": {"text": title, "font": {"size": 16}},
+                "xaxis": {"title": "Time", "tickangle": -25, "showgrid": False},
+                "yaxis": {"title": f"Value ({unit})", "zeroline": False},
+                "margin": {"t": 60, "b": 90, "l": 60, "r": 30},
+                "legend": {"orientation": "h", "y": 1.1},
+                "plot_bgcolor": "rgba(248, 250, 252, 0.8)",
+                "paper_bgcolor": "white",
+                "font": {"family": "Inter, system-ui, sans-serif"},
+            },
+        }
+
+        if fleet_vals:
+            plotly_json["data"].append(
+                {
+                    "type": "scatter",
+                    "mode": "lines",
+                    "name": "Fleet avg",
+                    "x": t_list,
+                    "y": fleet_vals,
+                    "line": {"color": "#64748B", "width": 2, "dash": "dot"},
+                    "hovertemplate": "%{x}<br>%{y}<extra></extra>",
+                }
+            )
+
+        if highlight_idx is not None:
+            plotly_json["data"].append(
+                {
+                    "type": "scatter",
+                    "mode": "markers",
+                    "name": "Selected",
+                    "x": [t_list[highlight_idx]],
+                    "y": [station_vals[highlight_idx]],
+                    "marker": {"size": 12, "color": "#DC2626", "symbol": "circle-open"},
+                    "hovertemplate": "Selected<br>%{x}<br>%{y}<extra></extra>",
+                }
+            )
+
+        return {"chart_type": "line", "title": title, "plotly_json": plotly_json}
+    except Exception:
+        return None
+
 # Create FastAPI app
 app = FastAPI(
     title="DS-Star Multi-Agent System API",
@@ -280,12 +379,29 @@ class InvestigationRecord(BaseModel):
     final_root_cause: Optional[str] = None
     final_actions: list[str] = []
     final_notes: Optional[str] = None
+    final_evidence: list[Dict[str, Any]] = []
+    # Persisted investigation artifacts (demo: in-memory)
+    steps: list[Dict[str, Any]] = []
+    diagnostics: list[Dict[str, Any]] = []
+    telemetry: Optional[Dict[str, Any]] = None
+
+
+class EvidenceItem(BaseModel):
+    kind: str  # "iteration" | "telemetry" | "diagnostic"
+    label: Optional[str] = None
+    step_id: Optional[str] = None
+    iteration_id: Optional[str] = None
+    investigation_id: Optional[str] = None
+    chart: Optional[Dict[str, Any]] = None
+    excerpt: Optional[str] = None
+    meta: Optional[Dict[str, Any]] = None
 
 
 class FinalizeInvestigationRequest(BaseModel):
     final_root_cause: str
     final_actions: list[str] = []
     final_notes: Optional[str] = None
+    evidence: list[EvidenceItem] = []
 
 
 # Startup event
@@ -543,6 +659,27 @@ async def techops_create_investigation(req: CreateInvestigationRequest):
     import uuid
 
     inv_id = f"INV-{uuid.uuid4().hex[:8].upper()}"
+    telemetry = generate_techops_kpi_chart(kpi_id=req.kpi_id, station=req.station, window=req.window, point_t=req.point_t)
+    diagnostics = [
+        {
+            "name": "MX driver check",
+            "status": "in_progress" if prompt_mode == "cause" else "completed",
+            "confidence": 0.68 if prompt_mode == "cause" else 0.54,
+            "detail": "Correlate KPI deviation with top fault/finding categories and recent work orders.",
+        },
+        {
+            "name": "YoY / seasonality test",
+            "status": "completed",
+            "confidence": 0.72,
+            "detail": "Compare current window to prior-year baseline for the same weeks/days.",
+        },
+        {
+            "name": "Station vs fleet comparison",
+            "status": "completed",
+            "confidence": 0.64,
+            "detail": "Benchmark station series vs fleet average to isolate local vs systemic drivers.",
+        },
+    ]
     record = {
         "investigation_id": inv_id,
         "kpi_id": req.kpi_id,
@@ -554,6 +691,9 @@ async def techops_create_investigation(req: CreateInvestigationRequest):
         "prompt_mode": prompt_mode,
         "prompt": prompt,
         "selected_point_t": req.point_t,
+        "steps": [],
+        "diagnostics": diagnostics,
+        "telemetry": telemetry,
     }
     _techops_investigations[inv_id] = record
     return CreateInvestigationResponse(investigation_id=inv_id, prompt_mode=prompt_mode, prompt=prompt)
@@ -587,6 +727,7 @@ async def techops_finalize_investigation(investigation_id: str, req: FinalizeInv
     inv["final_root_cause"] = req.final_root_cause
     inv["final_actions"] = req.final_actions
     inv["final_notes"] = req.final_notes
+    inv["final_evidence"] = [e.model_dump() for e in req.evidence] if req.evidence else []
     inv["status"] = "finalized"
     _techops_investigations[investigation_id] = inv
     return InvestigationRecord(**inv)
@@ -786,6 +927,13 @@ async def websocket_stream(websocket: WebSocket):
                     })
                     continue
 
+                # Optional Tech Ops context so we can generate KPI charts and persist to the right investigation
+                inv_id = data.get("data", {}).get("investigation_id")
+                kpi_id = data.get("data", {}).get("kpi_id")
+                station = data.get("data", {}).get("station")
+                window = data.get("data", {}).get("window")
+                point_t = data.get("data", {}).get("point_t")
+
                 max_iterations = int(data.get("data", {}).get("max_iterations", 20))
                 if max_iterations < 1:
                     max_iterations = 1
@@ -814,6 +962,22 @@ async def websocket_stream(websocket: WebSocket):
                         "step_number": 1,
                     },
                 })
+
+                # Persist step record (demo: in-memory) if this is a Tech Ops investigation
+                if inv_id and inv_id in _techops_investigations:
+                    inv = _techops_investigations[inv_id]
+                    inv_steps = inv.get("steps", [])
+                    inv_steps.append(
+                        {
+                            "step_id": step_id,
+                            "step_number": 1,
+                            "query": research_goal,
+                            "iterations": [],
+                            "created_at": datetime.utcnow().isoformat(),
+                        }
+                    )
+                    inv["steps"] = inv_steps
+                    _techops_investigations[inv_id] = inv
 
                 # Loop up to 20 iterations (DS-STAR style) to refine until "satisfied"
                 last_output = ""
@@ -880,18 +1044,43 @@ async def websocket_stream(websocket: WebSocket):
                             },
                         })
 
-                        # Visualization (best-effort)
-                        if response.synthesized_response:
+                        # Visualization (Tech Ops preferred; fallback to text parsing)
+                        chart_data = None
+                        if kpi_id and station and window:
+                            chart_data = generate_techops_kpi_chart(kpi_id=kpi_id, station=station, window=window, point_t=point_t)
+                        if not chart_data and response.synthesized_response:
                             chart_data = generate_chart_from_response(response.synthesized_response, research_goal)
-                            if chart_data:
-                                await websocket.send_json({
-                                    "type": "visualization_ready",
-                                    "data": {
-                                        "step_id": step_id,
-                                        "iteration_id": iteration_id,
-                                        "chart": chart_data,
-                                    },
-                                })
+                        if chart_data:
+                            await websocket.send_json({
+                                "type": "visualization_ready",
+                                "data": {
+                                    "step_id": step_id,
+                                    "iteration_id": iteration_id,
+                                    "chart": chart_data,
+                                },
+                            })
+
+                        # Persist iteration record (demo: in-memory)
+                        if inv_id and inv_id in _techops_investigations:
+                            inv = _techops_investigations[inv_id]
+                            inv_steps = inv.get("steps", [])
+                            for st in inv_steps:
+                                if st.get("step_id") == step_id:
+                                    st.setdefault("iterations", []).append(
+                                        {
+                                            "iteration_id": iteration_id,
+                                            "iteration_number": i,
+                                            "generated_code": code,
+                                            "query": iteration_query,
+                                            "response": response.synthesized_response or "",
+                                            "chart": chart_data,
+                                            "include_in_final": True,
+                                            "created_at": datetime.utcnow().isoformat(),
+                                        }
+                                    )
+                                    break
+                            inv["steps"] = inv_steps
+                            _techops_investigations[inv_id] = inv
 
                         await websocket.send_json({
                             "type": "verification_complete",
@@ -906,9 +1095,8 @@ async def websocket_stream(websocket: WebSocket):
                             },
                         })
 
-                        # Stop early if output looks like a final conclusion
-                        if response.synthesized_response and ("final" in response.synthesized_response.lower() or "root cause" in response.synthesized_response.lower()):
-                            break
+                        # NOTE: we intentionally do NOT stop early; DS-STAR runs up to max_iterations
+                        # so the UI can show the full investigation trace for selection/curation.
 
                     except Exception as e:
                         logger.error(f"Analysis error: {e}", exc_info=True)

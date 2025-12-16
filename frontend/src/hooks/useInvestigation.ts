@@ -315,12 +315,12 @@ export function useInvestigation() {
   }, [])
 
   // Run analysis for current step
-  const runAnalysis = useCallback((query: string) => {
+  const runAnalysis = useCallback((query: string, options?: Parameters<typeof wsService.startAnalysis>[1]) => {
     if (!investigation || isProcessing) return
 
     pendingQueryRef.current = query
     setIsProcessing(true)
-    wsService.startAnalysis(query)
+    wsService.startAnalysis(query, options)
   }, [investigation, isProcessing])
 
   const setIterationIncluded = useCallback((stepId: string, iterationId: string, includeInFinal: boolean) => {

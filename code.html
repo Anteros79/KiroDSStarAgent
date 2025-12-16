@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Operational Metrics Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#1e3a5f", // Deep Navy Blue for headers
+                        secondary: "#304CB2", // SWA Brighter Blue for accents
+                        "swa-blue": "#304CB2", // SWA Brand Blue
+                        "swa-red": "#E31837", // SWA Brand Red
+                        "swa-yellow": "#FFBF27", // SWA Brand Yellow
+                        "background-light": "#f3f4f6",
+                        "background-dark": "#111827",
+                        "chart-orange": "#d97706",
+                        "chart-purple": "#7e22ce",
+                        "chart-line": "#374151",
+                        "trend-green": "#16a34a",
+                    },
+                    fontFamily: {
+                        display: ["Roboto", "sans-serif"],
+                        body: ["Roboto", "sans-serif"],
+                    },
+                    fontSize: {
+                        'xxs': '0.65rem',
+                    }
+                },
+            },
+        };
+    </script>
+<style>
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #888; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555; 
+        }
+        .chart-grid-line {
+            stroke: #e5e7eb;
+            stroke-width: 1;
+        }
+        .dark .chart-grid-line {
+            stroke: #374151;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-body text-gray-900 dark:text-gray-100 min-h-screen p-4 flex flex-col">
+<header class="flex flex-col md:flex-row justify-between items-center mb-4 bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+<h1 class="text-2xl font-black text-gray-900 dark:text-white tracking-tight">Operational Metrics Dashboard</h1>
+<div class="mt-2 md:mt-0 flex items-center bg-gray-100 dark:bg-gray-700 rounded-md px-3 py-2 border border-gray-300 dark:border-gray-600">
+<span class="text-sm font-medium text-gray-600 dark:text-gray-300 mr-2">Date Select Range:</span>
+<span class="text-sm font-bold text-gray-800 dark:text-white">Week of 12/9/24 - 12/10/25</span>
+<span class="material-icons text-gray-500 dark:text-gray-400 ml-2 cursor-pointer">calendar_today</span>
+</div>
+</header>
+<main class="flex flex-col flex-grow gap-4">
+<div class="flex flex-col sm:flex-row items-start sm:items-center gap-3 px-1 mb-1">
+<div class="flex items-center text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+<span class="material-icons text-base mr-1 text-chart-orange">sensors</span>
+            Active Signals:
+        </div>
+<div class="flex flex-wrap gap-3">
+<a class="group flex items-center bg-white dark:bg-gray-800 border border-swa-red/40 hover:border-swa-red rounded-full py-1.5 pl-3 pr-4 shadow-sm hover:shadow-md transition-all duration-200" href="#" title="Navigate to Investigation">
+<span class="relative flex h-2.5 w-2.5 mr-2.5">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-swa-red opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-swa-red"></span>
+</span>
+<span class="text-xs font-bold text-gray-700 dark:text-gray-200 group-hover:text-swa-red transition-colors">OTP MX Rate: Limit Breach</span>
+<span class="material-icons text-sm text-gray-400 ml-1 group-hover:text-swa-red transform group-hover:translate-x-0.5 transition-transform">arrow_forward</span>
+</a>
+<a class="group flex items-center bg-white dark:bg-gray-800 border border-swa-yellow hover:border-yellow-500 rounded-full py-1.5 pl-3 pr-4 shadow-sm hover:shadow-md transition-all duration-200" href="#" title="Navigate to Investigation">
+<span class="h-2.5 w-2.5 rounded-full bg-swa-yellow mr-2.5"></span>
+<span class="text-xs font-bold text-gray-700 dark:text-gray-200 group-hover:text-yellow-600 dark:group-hover:text-yellow-400 transition-colors">Finding Rate: Deviation</span>
+<span class="material-icons text-sm text-gray-400 ml-1 group-hover:text-yellow-600 transform group-hover:translate-x-0.5 transition-transform">arrow_forward</span>
+</a>
+<a class="group flex items-center bg-white dark:bg-gray-800 border border-swa-blue/40 hover:border-swa-blue rounded-full py-1.5 pl-3 pr-4 shadow-sm hover:shadow-md transition-all duration-200" href="#" title="Navigate to Investigation">
+<span class="h-2.5 w-2.5 rounded-full bg-swa-blue mr-2.5"></span>
+<span class="text-xs font-bold text-gray-700 dark:text-gray-200 group-hover:text-swa-blue transition-colors">MEL Count: Investigation</span>
+<span class="material-icons text-sm text-gray-400 ml-1 group-hover:text-swa-blue transform group-hover:translate-x-0.5 transition-transform">arrow_forward</span>
+</a>
+</div>
+</div>
+<div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+<div class="flex flex-col space-y-3">
+<div class="flex rounded-t-md overflow-hidden text-white text-xs sm:text-sm font-bold">
+<div class="bg-primary flex-grow p-2 pl-4 flex flex-col justify-center border-r border-blue-800">
+<span class="text-base">Rolling 53 Week Trend</span>
+<span class="font-normal opacity-80 text-xs">Week of 12/9/24 - 12/10/25</span>
+</div>
+<div class="bg-primary w-32 sm:w-40 p-2 flex flex-col justify-center items-center text-center">
+<span class="text-base">Past Week</span>
+<span class="font-normal opacity-80 text-xs">12/1/25 - 12/7/25</span>
+</div>
+</div>
+<div class="bg-white dark:bg-gray-800 rounded-md shadow-sm border border-gray-200 dark:border-gray-700 flex flex-row items-stretch min-h-[110px]">
+<div class="w-24 sm:w-32 flex items-center justify-end pr-4 py-2 border-r border-gray-100 dark:border-gray-700">
+<h3 class="text-sm sm:text-base font-bold text-right leading-tight">OTP MX<br/>Rate</h3>
+</div>
+<div class="w-24 sm:w-28 flex flex-col justify-center px-3 py-2 text-xs space-y-1 border-r border-gray-100 dark:border-gray-700">
+<div class="flex justify-between">
+<span class="font-bold text-gray-500 dark:text-gray-400">Mean</span>
+<span class="font-bold">2.8%</span>
+</div>
+<div class="flex justify-between">
+<span class="font-bold text-gray-500 dark:text-gray-400">UL/LL+/-</span>
+<span class="font-bold">0.9%</span>
+</div>
+<div class="flex justify-between">
+<span class="font-bold text-gray-500 dark:text-gray-400">Goal</span>
+<span class="font-bold text-gray-600 dark:text-gray-300">Trial</span>
+</div>
+</div>
+<div class="flex-grow relative py-2 px-1">
+<svg class="w-full h-full" preserveAspectRatio="none" viewBox="0 0 200 60">
+<text class="text-[6px] fill-chart-orange font-bold" x="2" y="10">UL</text>
+<line stroke="#d97706" stroke-dasharray="2,1" stroke-width="0.5" x1="15" x2="200" y1="8" y2="8"></line>
+<text class="text-[6px] fill-chart-purple font-bold" x="2" y="55">LL</text>
+<line stroke="#7e22ce" stroke-dasharray="2,1" stroke-width="0.5" x1="15" x2="200" y1="52" y2="52"></line>
+<text class="text-[5px] fill-gray-400" x="5" y="32">Mean</text>
+<line stroke="#9ca3af" stroke-width="0.5" x1="15" x2="200" y1="30" y2="30"></line>
+<path class="dark:stroke-gray-300" d="M15 30 L25 35 L35 25 L45 32 L55 28 L65 38 L75 30 L85 20 L95 25 L105 35 L115 30 L125 18 L135 22 L145 32 L155 28 L165 40 L175 35 L185 25 L195 28" fill="none" stroke="#4b5563" stroke-width="1.5"></path>
+<text class="text-[4px] fill-gray-400" x="20" y="59">02/10</text>
+<text class="text-[4px] fill-gray-400" x="60" y="59">05/05</text>
+<text class="text-[4px] fill-gray-400" x="100" y="59">07/28</text>
+<text class="text-[4px] fill-gray-400" x="140" y="59">10/20</text>
+</svg>
+</div>
+<div class="w-32 sm:w-40 flex flex-col justify-center items-center border-l border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
+<span class="text-xs text-gray-500 dark:text-gray-400 mb-1">Past Week</span>
+<span class="text-2xl font-black text-gray-900 dark:text-white">2.89%</span>
+<span class="material-icons text-trend-green text-3xl transform -rotate-45">arrow_right_alt</span>
+</div>
+</div>
+<div class="bg-white dark:bg-gray-800 rounded-md shadow-sm border border-gray-200 dark:border-gray-700 flex flex-row items-stretch min-h-[110px]">
+<div class="w-24 sm:w-32 flex items-center justify-end pr-4 py-2 border-r border-gray-100 dark:border-gray-700">
+<h3 class="text-sm sm:text-base font-bold text-right leading-tight">EMO MX<br/>Rate</h3>
+</div>
+<div class="w-24 sm:w-28 flex flex-col justify-center px-3 py-2 text-xs space-y-1 border-r border-gray-100 dark:border-gray-700">
+<div class="flex justify-between"><span class="font-bold text-gray-500 dark:text-gray-400">Mean</span><span class="font-bold">98.0%</span></div>
+<div class="flex justify-between"><span class="font-bold text-gray-500 dark:text-gray-400">UL/LL+/-</span><span class="font-bold">0.6%</span></div>
+<div class="flex justify-between"><span class="font-bold text-gray-500 dark:text-gray-400">Goal</span><span class="font-bold text-gray-600">N/S</span></div>
+</div>
+<div class="flex-grow relative py-2 px-1">
+<svg class="w-full h-full" preserveAspectRatio="none" viewBox="0 0 200 60">
+<text class="text-[6px] fill-chart-orange font-bold" x="2" y="10">UL</text>
+<line stroke="#d97706" stroke-dasharray="2,1" stroke-width="0.5" x1="15" x2="200" y1="8" y2="8"></line>
+<text class="text-[6px] fill-chart-purple font-bold" x="2" y="55">LL</text>
+<line stroke="#7e22ce" stroke-dasharray="2,1" stroke-width="0.5" x1="15" x2="200" y1="52" y2="52"></line>
+<line stroke="#9ca3af" stroke-width="0.5" x1="15" x2="200" y1="30" y2="30"></line>
+<path class="dark:stroke-gray-300" d="M15 32 L25 28 L35 30 L45 25 L55 35 L65 30 L75 32 L85 28 L95 29 L105 26 L115 31 L125 33 L135 30 L145 28 L155 25 L165 20 L175 25 L185 30 L195 28" fill="none" stroke="#4b5563" stroke-width="1.5"></path>
+<text class="text-[4px] fill-gray-400" x="20" y="59">02/10</text>
+<text class="text-[4px] fill-gray-400" x="100" y="59">07/28</text>
+<text class="text-[4px] fill-gray-400" x="180" y="59">10/20</text>
+</svg>
+</div>
+<div class="w-32 sm:w-40 flex flex-col justify-center items-center border-l border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
+<span class="text-xs text-gray-500 dark:text-gray-400 mb-1">Past Week</span>
+<span class="text-2xl font-black text-gray-900 dark:text-white">98.0%</span>
+<span class="material-icons text-trend-green text-3xl">arrow_right_alt</span>
+</div>
+</div>
+<div class="bg-white dark:bg-gray-800 rounded-md shadow-sm border border-gray-200 dark:border-gray-700 flex flex-row items-stretch min-h-[110px]">
+<div class="w-24 sm:w-32 flex items-center justify-end pr-4 py-2 border-r border-gray-100 dark:border-gray-700">
+<h3 class="text-sm sm:text-base font-bold text-right leading-tight">Extreme<br/>Delay MX<br/>Rate</h3>
+</div>
+<div class="w-24 sm:w-28 flex flex-col justify-center px-3 py-2 text-xs space-y-1 border-r border-gray-100 dark:border-gray-700">
+<div class="flex justify-between"><span class="font-bold text-gray-500 dark:text-gray-400">Mean</span><span class="font-bold">1.15%</span></div>
+<div class="flex justify-between"><span class="font-bold text-gray-500 dark:text-gray-400">UL/LL+/-</span><span class="font-bold">0.5%</span></div>
+<div class="flex justify-between"><span class="font-bold text-gray-500 dark:text-gray-400">Goal</span><span class="font-bold text-gray-600">Trial</span></div>
+</div>
+<div class="flex-grow relative py-2 px-1">
+<svg class="w-full h-full" preserveAspectRatio="none" viewBox="0 0 200 60">
+<text class="text-[6px] fill-chart-orange font-bold" x="2" y="10">UL</text>
+<line stroke="#d97706" stroke-dasharray="2,1" stroke-width="0.5" x1="15" x2="200" y1="8" y2="8"></line>
+<text class="text-[6px] fill-chart-purple font-bold" x="2" y="55">LL</text>
+<line stroke="#7e22ce" stroke-dasharray="2,1" stroke-width="0.5" x1="15" x2="200" y1="52" y2="52"></line>
+<line stroke="#9ca3af" stroke-width="0.5" x1="15" x2="200" y1="30" y2="30"></line>
+<path class="dark:stroke-gray-300" d="M15 35 L25 40 L35 20 L45 35 L55 25 L65 38 L75 22 L85 15 L95 28 L105 18 L115 35 L125 40 L135 32 L145 28 L155 25 L165 30 L175 35 L185 30 L195 25" fill="none" stroke="#4b5563" stroke-width="1.5"></path>
+<text class="text-[4px] fill-gray-400" x="20" y="59">02/10</text>
+<text class="text-[4px] fill-gray-400" x="100" y="59">07/28</text>
+<text class="text-[4px] fill-gray-400" x="180" y="59">10/20</text>
+</svg>
+</div>
+<div class="w-32 sm:w-40 flex flex-col justify-center items-center border-l border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
+<span class="text-xs text-gray-500 dark:text-gray-400 mb-1">Past Week</span>
+<span class="text-2xl font-black text-gray-900 dark:text-white">1.28%</span>
+<span class="material-icons text-trend-green text-3xl transform -rotate-45">arrow_right_alt</span>
+</div>
+</div>
+<div class="bg-white dark:bg-gray-800 rounded-md shadow-sm border border-gray-200 dark:border-gray-700 flex flex-row items-stretch min-h-[110px]">
+<div class="w-24 sm:w-32 flex items-center justify-end pr-4 py-2 border-r border-gray-100 dark:border-gray-700">
+<h3 class="text-sm sm:text-base font-bold text-right leading-tight">Fault<br/>Rate</h3>
+</div>
+<div class="w-24 sm:w-28 flex flex-col justify-center px-3 py-2 text-xs space-y-1 border-r border-gray-100 dark:border-gray-700">
+<div class="flex justify-between"><span class="font-bold text-gray-500 dark:text-gray-400">Mean</span><span class="font-bold">0.52</span></div>
+<div class="flex justify-between"><span class="font-bold text-gray-500 dark:text-gray-400">UL/LL+/-</span><span class="font-bold">0.06</span></div>
+<div class="flex justify-between"><span class="font-bold text-gray-500 dark:text-gray-400">Goal</span><span class="font-bold text-gray-600">N/S</span></div>
+</div>
+<div class="flex-grow relative py-2 px-1">
+<svg class="w-full h-full" preserveAspectRatio="none" viewBox="0 0 200 60">
+<text class="text-[6px] fill-chart-orange font-bold" x="2" y="10">UL</text>
+<line stroke="#d97706" stroke-dasharray="2,1" stroke-width="0.5" x1="15" x2="200" y1="8" y2="8"></line>
+<text class="text-[6px] fill-chart-purple font-bold" x="2" y="55">LL</text>
+<line stroke="#7e22ce" stroke-dasharray="2,1" stroke-width="0.5" x1="15" x2="200" y1="52" y2="52"></line>
+<line stroke="#9ca3af" stroke-width="0.5" x1="15" x2="200" y1="30" y2="30"></line>
+<path class="dark:stroke-gray-300" d="M15 45 L25 35 L35 48 L45 32 L55 35 L65 30 L75 25 L85 18 L95 28 L105 15 L115 25 L125 35 L135 28 L145 38 L155 42 L165 35 L175 45 L185 48 L195 45" fill="none" stroke="#4b5563" stroke-width="1.5"></path>
+<text class="text-[4px] fill-gray-400" x="20" y="59">02/10</text>
+<text class="text-[4px] fill-gray-400" x="100" y="59">07/28</text>
+<text class="text-[4px] fill-gray-400" x="180" y="59">10/20</text>
+</svg>
+</div>
+<div class="w-32 sm:w-40 flex flex-col justify-center items-center border-l border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
+<span class="text-xs text-gray-500 dark:text-gray-400 mb-1">Past Week</span>
+<span class="text-2xl font-black text-gray-900 dark:text-white">0.50</span>
+<span class="material-icons text-trend-green text-3xl">arrow_right_alt</span>
+</div>
+</div>
+<div class="bg-white dark:bg-gray-800 rounded-md shadow-sm border border-gray-200 dark:border-gray-700 flex flex-row items-stretch min-h-[110px]">
+<div class="w-24 sm:w-32 flex items-center justify-end pr-4 py-2 border-r border-gray-100 dark:border-gray-700">
+<h3 class="text-sm sm:text-base font-bold text-right leading-tight">Finding<br/>Rate</h3>
+</div>
+<div class="w-24 sm:w-28 flex flex-col justify-center px-3 py-2 text-xs space-y-1 border-r border-gray-100 dark:border-gray-700">
+<div class="flex justify-between"><span class="font-bold text-gray-500 dark:text-gray-400">Mean</span><span class="font-bold">2.20</span></div>
+<div class="flex justify-between"><span class="font-bold text-gray-500 dark:text-gray-400">UL/LL+/-</span><span class="font-bold">0.66</span></div>
+<div class="flex justify-between"><span class="font-bold text-gray-500 dark:text-gray-400">Goal</span><span class="font-bold text-gray-600">N/S</span></div>
+</div>
+<div class="flex-grow relative py-2 px-1">
+<svg class="w-full h-full" preserveAspectRatio="none" viewBox="0 0 200 60">
+<text class="text-[6px] fill-chart-orange font-bold" x="2" y="10">UL</text>
+<line stroke="#d97706" stroke-dasharray="2,1" stroke-width="0.5" x1="15" x2="200" y1="8" y2="8"></line>
+<text class="text-[6px] fill-chart-purple font-bold" x="2" y="55">LL</text>
+<line stroke="#7e22ce" stroke-dasharray="2,1" stroke-width="0.5" x1="15" x2="200" y1="52" y2="52"></line>
+<line stroke="#9ca3af" stroke-width="0.5" x1="15" x2="200" y1="30" y2="30"></line>
+<path class="dark:stroke-gray-300" d="M15 40 L25 45 L35 25 L45 28 L55 30 L65 28 L75 32 L85 25 L95 35 L105 28 L115 32 L125 30 L135 15 L145 25 L155 30 L165 35 L175 25 L185 28 L195 25" fill="none" stroke="#4b5563" stroke-width="1.5"></path>
+<text class="text-[4px] fill-gray-400" x="20" y="59">02/10</text>
+<text class="text-[4px] fill-gray-400" x="100" y="59">07/28</text>
+<text class="text-[4px] fill-gray-400" x="180" y="59">10/20</text>
+</svg>
+</div>
+<div class="w-32 sm:w-40 flex flex-col justify-center items-center border-l border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
+<span class="text-xs text-gray-500 dark:text-gray-400 mb-1">Past Week</span>
+<span class="text-2xl font-black text-gray-900 dark:text-white">2.32</span>
+<span class="material-icons text-trend-green text-3xl">arrow_right_alt</span>
+</div>
+</div>
+</div>
+<div class="flex flex-col space-y-3">
+<div class="flex rounded-t-md overflow-hidden text-white text-xs sm:text-sm font-bold">
+<div class="bg-primary flex-grow p-2 pl-4 flex flex-col justify-center border-r border-blue-800">
+<span class="text-base">Rolling 53 Week Trend</span>
+<span class="font-normal opacity-80 text-xs">Week of 12/9/24 - 12/10/25</span>
+</div>
+<div class="bg-primary w-32 sm:w-40 p-2 flex flex-col justify-center items-center text-center">
+<span class="text-base">Past Week</span>
+<span class="font-normal opacity-80 text-xs">12/1/25 - 12/7/25</span>
+</div>
+</div>
+<div class="bg-white dark:bg-gray-800 rounded-md shadow-sm border border-gray-200 dark:border-gray-700 flex flex-row items-stretch min-h-[110px]">
+<div class="w-24 sm:w-32 flex items-center justify-end pr-4 py-2 border-r border-gray-100 dark:border-gray-700">
+<h3 class="text-sm sm:text-base font-bold text-right leading-tight">OTS<br/>Rate</h3>
+</div>
+<div class="w-24 sm:w-28 flex flex-col justify-center px-3 py-2 text-xs space-y-1 border-r border-gray-100 dark:border-gray-700">
+<div class="flex justify-between"><span class="font-bold text-gray-500 dark:text-gray-400">Mean</span><span class="font-bold">0.06</span></div>
+<div class="flex justify-between"><span class="font-bold text-gray-500 dark:text-gray-400">UL/LL+/-</span><span class="font-bold">0.01</span></div>
+<div class="flex justify-between"><span class="font-bold text-gray-500 dark:text-gray-400">Goal</span><span class="font-bold text-gray-600">Trial</span></div>
+</div>
+<div class="flex-grow relative py-2 px-1">
+<svg class="w-full h-full" preserveAspectRatio="none" viewBox="0 0 200 60">
+<text class="text-[6px] fill-chart-orange font-bold" x="2" y="10">UL</text>
+<line stroke="#d97706" stroke-dasharray="2,1" stroke-width="0.5" x1="15" x2="200" y1="8" y2="8"></line>
+<text class="text-[6px] fill-chart-purple font-bold" x="2" y="55">LL</text>
+<line stroke="#7e22ce" stroke-dasharray="2,1" stroke-width="0.5" x1="15" x2="200" y1="52" y2="52"></line>
+<line stroke="#9ca3af" stroke-width="0.5" x1="15" x2="200" y1="30" y2="30"></line>
+<path class="dark:stroke-gray-300" d="M15 38 L25 42 L35 30 L45 35 L55 25 L65 28 L75 18 L85 22 L95 15 L105 25 L115 20 L125 35 L135 30 L145 32 L155 40 L165 30 L175 18 L185 20 L195 25" fill="none" stroke="#4b5563" stroke-width="1.5"></path>
+<text class="text-[4px] fill-gray-400" x="20" y="59">02/10</text>
+<text class="text-[4px] fill-gray-400" x="100" y="59">07/28</text>
+<text class="text-[4px] fill-gray-400" x="180" y="59">10/20</text>
+</svg>
+</div>
+<div class="w-32 sm:w-40 flex flex-col justify-center items-center border-l border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
+<span class="text-xs text-gray-500 dark:text-gray-400 mb-1">Past Week</span>
+<span class="text-2xl font-black text-gray-900 dark:text-white">0.060</span>
+<span class="material-icons text-trend-green text-3xl transform -rotate-45">arrow_right_alt</span>
+</div>
+</div>
+<div class="bg-white dark:bg-gray-800 rounded-md shadow-sm border border-gray-200 dark:border-gray-700 flex flex-row items-stretch min-h-[110px]">
+<div class="w-24 sm:w-32 flex items-center justify-end pr-4 py-2 border-r border-gray-100 dark:border-gray-700">
+<h3 class="text-sm sm:text-base font-bold text-right leading-tight">MEL<br/>Rate</h3>
+</div>
+<div class="w-24 sm:w-28 flex flex-col justify-center px-3 py-2 text-xs space-y-1 border-r border-gray-100 dark:border-gray-700">
+<div class="flex justify-between"><span class="font-bold text-gray-500 dark:text-gray-400">Mean</span><span class="font-bold">0.34</span></div>
+<div class="flex justify-between"><span class="font-bold text-gray-500 dark:text-gray-400">UL/LL+/-</span><span class="font-bold">0.05</span></div>
+<div class="flex justify-between"><span class="font-bold text-gray-500 dark:text-gray-400">Goal</span><span class="font-bold text-gray-600">Trial</span></div>
+</div>
+<div class="flex-grow relative py-2 px-1">
+<svg class="w-full h-full" preserveAspectRatio="none" viewBox="0 0 200 60">
+<text class="text-[6px] fill-chart-orange font-bold" x="2" y="10">UL</text>
+<line stroke="#d97706" stroke-dasharray="2,1" stroke-width="0.5" x1="15" x2="200" y1="8" y2="8"></line>
+<text class="text-[6px] fill-chart-purple font-bold" x="2" y="55">LL</text>
+<line stroke="#7e22ce" stroke-dasharray="2,1" stroke-width="0.5" x1="15" x2="200" y1="52" y2="52"></line>
+<line stroke="#9ca3af" stroke-width="0.5" x1="15" x2="200" y1="30" y2="30"></line>
+<path class="dark:stroke-gray-300" d="M15 35 L25 45 L35 42 L45 35 L55 38 L65 32 L75 30 L85 35 L95 25 L105 18 L115 15 L125 22 L135 25 L145 28 L155 30 L165 38 L175 42 L185 35 L195 38" fill="none" stroke="#4b5563" stroke-width="1.5"></path>
+<text class="text-[4px] fill-gray-400" x="20" y="59">02/10</text>
+<text class="text-[4px] fill-gray-400" x="100" y="59">07/28</text>
+<text class="text-[4px] fill-gray-400" x="180" y="59">10/20</text>
+</svg>
+</div>
+<div class="w-32 sm:w-40 flex flex-col justify-center items-center border-l border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
+<span class="text-xs text-gray-500 dark:text-gray-400 mb-1">Past Week</span>
+<span class="text-2xl font-black text-gray-900 dark:text-white">0.323</span>
+<span class="material-icons text-trend-green text-3xl">arrow_right_alt</span>
+</div>
+</div>
+<div class="bg-white dark:bg-gray-800 rounded-md shadow-sm border border-gray-200 dark:border-gray-700 flex flex-row items-stretch min-h-[110px]">
+<div class="w-24 sm:w-32 flex items-center justify-end pr-4 py-2 border-r border-gray-100 dark:border-gray-700">
+<h3 class="text-sm sm:text-base font-bold text-right leading-tight">MEL CX<br/>Rate</h3>
+</div>
+<div class="w-24 sm:w-28 flex flex-col justify-center px-3 py-2 text-xs space-y-1 border-r border-gray-100 dark:border-gray-700">
+<div class="flex justify-between"><span class="font-bold text-gray-500 dark:text-gray-400">Mean</span><span class="font-bold">0.08</span></div>
+<div class="flex justify-between"><span class="font-bold text-gray-500 dark:text-gray-400">UL/LL+/-</span><span class="font-bold">0.02</span></div>
+<div class="flex justify-between"><span class="font-bold text-gray-500 dark:text-gray-400">Goal</span><span class="font-bold text-gray-600">Trial</span></div>
+</div>
+<div class="flex-grow relative py-2 px-1">
+<svg class="w-full h-full" preserveAspectRatio="none" viewBox="0 0 200 60">
+<text class="text-[6px] fill-chart-orange font-bold" x="2" y="10">UL</text>
+<line stroke="#d97706" stroke-dasharray="2,1" stroke-width="0.5" x1="15" x2="200" y1="8" y2="8"></line>
+<text class="text-[6px] fill-chart-purple font-bold" x="2" y="55">LL</text>
+<line stroke="#7e22ce" stroke-dasharray="2,1" stroke-width="0.5" x1="15" x2="200" y1="52" y2="52"></line>
+<line stroke="#9ca3af" stroke-width="0.5" x1="15" x2="200" y1="30" y2="30"></line>
+<path class="dark:stroke-gray-300" d="M15 10 L25 45 L35 48 L45 35 L55 30 L65 40 L75 35 L85 28 L95 40 L105 32 L115 30 L125 25 L135 35 L145 30 L155 25 L165 30 L175 32 L185 30 L195 28" fill="none" stroke="#4b5563" stroke-width="1.5"></path>
+<text class="text-[4px] fill-gray-400" x="20" y="59">02/10</text>
+<text class="text-[4px] fill-gray-400" x="100" y="59">07/28</text>
+<text class="text-[4px] fill-gray-400" x="180" y="59">10/20</text>
+</svg>
+</div>
+<div class="w-32 sm:w-40 flex flex-col justify-center items-center border-l border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
+<span class="text-xs text-gray-500 dark:text-gray-400 mb-1">Past Week</span>
+<span class="text-2xl font-black text-gray-900 dark:text-white">0.079</span>
+<span class="material-icons text-trend-green text-3xl">arrow_right_alt</span>
+</div>
+</div>
+<div class="bg-white dark:bg-gray-800 rounded-md shadow-sm border border-gray-200 dark:border-gray-700 flex flex-row items-stretch min-h-[110px]">
+<div class="w-24 sm:w-32 flex items-center justify-end pr-4 py-2 border-r border-gray-100 dark:border-gray-700">
+<h3 class="text-sm sm:text-base font-bold text-right leading-tight">Injury<br/>Counts</h3>
+</div>
+<div class="w-24 sm:w-28 flex flex-col justify-center px-3 py-2 text-xs space-y-1 border-r border-gray-100 dark:border-gray-700">
+<div class="flex justify-between"><span class="font-bold text-gray-500 dark:text-gray-400">Mean</span><span class="font-bold">9.29</span></div>
+<div class="flex justify-between"><span class="font-bold text-gray-500 dark:text-gray-400">UL/LL+/-</span><span class="font-bold">10.53</span></div>
+<div class="flex justify-between"><span class="font-bold text-gray-500 dark:text-gray-400">Goal</span><span class="font-bold text-gray-600">Trial</span></div>
+</div>
+<div class="flex-grow relative py-2 px-1">
+<svg class="w-full h-full" preserveAspectRatio="none" viewBox="0 0 200 60">
+<text class="text-[6px] fill-chart-orange font-bold" x="2" y="10">UL</text>
+<line stroke="#d97706" stroke-dasharray="2,1" stroke-width="0.5" x1="15" x2="200" y1="8" y2="8"></line>
+<line stroke="#7e22ce" stroke-dasharray="2,1" stroke-width="0.5" x1="15" x2="200" y1="58" y2="58"></line>
+<line stroke="#9ca3af" stroke-width="0.5" x1="15" x2="200" y1="30" y2="30"></line>
+<path class="dark:stroke-gray-300" d="M15 48 L25 45 L35 25 L45 32 L55 35 L65 28 L75 30 L85 25 L95 32 L105 28 L115 30 L125 35 L135 25 L145 30 L155 35 L165 42 L175 25 L185 40 L195 48" fill="none" stroke="#4b5563" stroke-width="1.5"></path>
+<text class="text-[4px] fill-gray-400" x="20" y="59">02/10</text>
+<text class="text-[4px] fill-gray-400" x="100" y="59">07/28</text>
+<text class="text-[4px] fill-gray-400" x="180" y="59">10/20</text>
+</svg>
+</div>
+<div class="w-32 sm:w-40 flex flex-col justify-center items-center border-l border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
+<span class="text-xs text-gray-500 dark:text-gray-400 mb-1">Past Week</span>
+<span class="text-2xl font-black text-gray-900 dark:text-white">6</span>
+<span class="material-icons text-trend-green text-3xl">arrow_right_alt</span>
+</div>
+</div>
+<div class="bg-white dark:bg-gray-800 rounded-md shadow-sm border border-gray-200 dark:border-gray-700 flex flex-row items-stretch min-h-[110px]">
+<div class="w-24 sm:w-32 flex items-center justify-end pr-4 py-2 border-r border-gray-100 dark:border-gray-700">
+<h3 class="text-sm sm:text-base font-bold text-right leading-tight">Premium<br/>Pay Rate</h3>
+</div>
+<div class="w-24 sm:w-28 flex flex-col justify-center px-3 py-2 text-xs space-y-1 border-r border-gray-100 dark:border-gray-700">
+<div class="flex justify-between"><span class="font-bold text-gray-500 dark:text-gray-400">Mean</span><span class="font-bold">13.3%</span></div>
+<div class="flex justify-between"><span class="font-bold text-gray-500 dark:text-gray-400">UL/LL+/-</span><span class="font-bold">10.0%</span></div>
+<div class="flex justify-between"><span class="font-bold text-gray-500 dark:text-gray-400">Goal</span><span class="font-bold text-gray-600">Trial</span></div>
+</div>
+<div class="flex-grow relative py-2 px-1">
+<svg class="w-full h-full" preserveAspectRatio="none" viewBox="0 0 200 60">
+<text class="text-[6px] fill-chart-orange font-bold" x="2" y="10">UL</text>
+<line stroke="#d97706" stroke-dasharray="2,1" stroke-width="0.5" x1="15" x2="200" y1="8" y2="8"></line>
+<text class="text-[6px] fill-chart-purple font-bold" x="2" y="55">LL</text>
+<line stroke="#7e22ce" stroke-dasharray="2,1" stroke-width="0.5" x1="15" x2="200" y1="52" y2="52"></line>
+<line stroke="#9ca3af" stroke-width="0.5" x1="15" x2="200" y1="30" y2="30"></line>
+<path class="dark:stroke-gray-300" d="M15 42 L25 15 L35 45 L45 42 L55 20 L65 42 L75 45 L85 18 L95 40 L105 42 L115 15 L125 45 L135 42 L145 20 L155 45 L165 42 L175 15 L185 45 L195 42" fill="none" stroke="#4b5563" stroke-width="1.5"></path>
+<text class="text-[4px] fill-gray-400" x="20" y="59">02/10</text>
+<text class="text-[4px] fill-gray-400" x="100" y="59">07/28</text>
+<text class="text-[4px] fill-gray-400" x="180" y="59">10/20</text>
+</svg>
+</div>
+<div class="w-32 sm:w-40 flex flex-col justify-center items-center border-l border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
+<span class="text-xs text-gray-500 dark:text-gray-400 mb-1">Past Week</span>
+<span class="text-2xl font-black text-gray-900 dark:text-white">12.8%</span>
+<span class="material-icons text-trend-green text-3xl">arrow_right_alt</span>
+</div>
+</div>
+</div>
+</div>
+</main>
+<footer class="mt-6 bg-white dark:bg-gray-800 p-4 rounded-md shadow-sm border border-gray-200 dark:border-gray-700 text-xxs sm:text-xs">
+<div class="flex flex-col md:flex-row justify-between">
+<div class="pr-4 space-y-2 text-gray-600 dark:text-gray-300 leading-relaxed">
+<p>
+<span class="font-bold text-gray-900 dark:text-white">Metric Definitions -</span>
+<span class="font-bold underline decoration-gray-400">OTP-MX:</span> OTP points lost due to MX; 
+                    <span class="font-bold underline decoration-gray-400">EMO-MX:</span> Percentage of EMOs without at MX Delay; 
+                    <span class="font-bold underline decoration-gray-400">MX Extreme Delay:</span> Arrival Delays &lt;45 due to MX; 
+                    <span class="font-bold underline decoration-gray-400">Faults:</span> Faults per AC during the operating day; 
+                    <span class="font-bold underline decoration-gray-400">Findings:</span> MX Findings from Scheduled MX; 
+                    <span class="font-bold underline decoration-gray-400">OTS:</span> OTS events per Operated AC; 
+                    <span class="font-bold underline decoration-gray-400">MEL:</span> MELs at 7AM per AC on Property; 
+                    <span class="font-bold underline decoration-gray-400">CX MEL:</span> Customer Impact MELs per daily operated AC. 
+                    <span class="font-bold underline decoration-gray-400">Injury:</span> Number of Tech Ops Injuries; 
+                    <span class="font-bold underline decoration-gray-400">Premium Pay:</span> Tech Ops Overall Premium Paid Hours as a percent of total paid
+                </p>
+</div>
+<div class="mt-4 md:mt-0 min-w-[120px] text-gray-500 dark:text-gray-400 border-l dark:border-gray-600 pl-4 space-y-1">
+<div class="flex justify-between"><span class="font-bold text-gray-700 dark:text-gray-200">N/S:</span> <span>Not Stable</span></div>
+<div class="flex justify-between"><span class="font-bold text-gray-700 dark:text-gray-200">Trial:</span> <span>&gt;=5 Stable Periods</span></div>
+<div class="flex justify-between"><span class="font-bold text-gray-700 dark:text-gray-200">Set:</span> <span>&gt;=30 Stable Periods</span></div>
+<div class="flex justify-between"><span class="font-bold text-gray-700 dark:text-gray-200">Lock:</span> <span>&gt;=100 Stable Periods</span></div>
+</div>
+</div>
+</footer>
+</body></html>

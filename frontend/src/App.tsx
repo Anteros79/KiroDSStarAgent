@@ -8,6 +8,7 @@ import { DemoIdentity } from './techops/types'
 import { TechOpsShell } from './techops/layout/TechOpsShell'
 import { DashboardPage } from './techops/pages/DashboardPage'
 import { InvestigationPage } from './techops/pages/InvestigationPage'
+import { FinalConclusionsPage } from './techops/pages/FinalConclusionsPage'
 
 function App() {
   const [status, setStatus] = useState<SystemStatus | null>(null)
@@ -19,6 +20,7 @@ function App() {
   const [identity, setIdentity] = useState<DemoIdentity | null>(null)
   const [activeTab, setActiveTab] = useState<'dashboard' | 'investigation' | 'fleet' | 'reports'>('dashboard')
   const [activeInvestigationId, setActiveInvestigationId] = useState<string | null>(null)
+  const [investigationView, setInvestigationView] = useState<'workbench' | 'final'>('workbench')
 
   useEffect(() => {
     apiService.getStatus()
@@ -88,6 +90,7 @@ function App() {
       onTabChange={(t) => {
         setActiveTab(t)
         if (t !== 'investigation') setActiveInvestigationId(null)
+        if (t !== 'investigation') setInvestigationView('workbench')
       }}
       onSwitchIdentity={async () => {
         // quick cycle identities for demo
@@ -106,16 +109,37 @@ function App() {
           onOpenInvestigation={async ({ kpi_id, window, point_t }) => {
             const created = await techOpsApi.createInvestigation({ kpi_id, station, window, point_t })
             setActiveInvestigationId(created.investigation_id)
+            setInvestigationView('workbench')
+            setActiveTab('investigation')
+          }}
+          onSelectInvestigation={(investigation_id) => {
+            setActiveInvestigationId(investigation_id)
+            setInvestigationView('workbench')
             setActiveTab('investigation')
           }}
         />
       )}
 
-      {activeTab === 'investigation' && activeInvestigationId && (
+      {activeTab === 'investigation' && activeInvestigationId && investigationView === 'workbench' && (
         <InvestigationPage
           investigationId={activeInvestigationId}
           onBack={() => {
             setActiveInvestigationId(null)
+            setInvestigationView('workbench')
+            setActiveTab('dashboard')
+          }}
+          onFinalize={() => setInvestigationView('final')}
+        />
+      )}
+
+      {activeTab === 'investigation' && activeInvestigationId && investigationView === 'final' && (
+        <FinalConclusionsPage
+          investigationId={activeInvestigationId}
+          onBack={() => setInvestigationView('workbench')}
+          onDone={() => {
+            // after submission, return to station signal grid
+            setActiveInvestigationId(null)
+            setInvestigationView('workbench')
             setActiveTab('dashboard')
           }}
         />

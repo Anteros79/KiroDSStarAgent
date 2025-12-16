@@ -76,6 +76,40 @@ export interface InvestigationRecord {
   prompt_mode: 'cause' | 'yoy'
   prompt: string
   selected_point_t?: string | null
+  diagnostics?: Array<{
+    name: string
+    status: 'pending' | 'in_progress' | 'completed' | 'failed' | string
+    confidence?: number
+    detail?: string
+  }>
+  telemetry?: {
+    chart_type: string
+    title: string
+    plotly_json: any
+  } | null
+  steps?: any[]
+  final_root_cause?: string | null
+  final_actions?: string[]
+  final_notes?: string | null
+  final_evidence?: any[]
+}
+
+export type EvidenceItem = {
+  kind: 'iteration' | 'telemetry' | 'diagnostic' | string
+  label?: string
+  step_id?: string
+  iteration_id?: string
+  investigation_id?: string
+  chart?: any
+  excerpt?: string
+  meta?: any
+}
+
+export type FinalizeInvestigationRequest = {
+  final_root_cause: string
+  final_actions: string[]
+  final_notes?: string | null
+  evidence: EvidenceItem[]
 }
 
 
