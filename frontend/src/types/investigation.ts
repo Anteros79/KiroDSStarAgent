@@ -35,6 +35,7 @@ export interface StepIteration {
   verification: VerificationResult
   status: 'pending' | 'generating' | 'executing' | 'verifying' | 'verified' | 'failed'
   feedback?: string
+  includeInFinal?: boolean
 }
 
 export interface ChartData {

@@ -1,10 +1,13 @@
-import { useState, useEffect } from 'react'
-import { AppShell } from './components/layout/AppShell'
-import { InvestigationWorkbench } from './components/investigation/InvestigationWorkbench'
+import { useEffect, useState } from 'react'
 import { useWebSocket } from './hooks/useWebSocket'
 import { apiService } from './services/api'
-import { SystemStatus, DatasetInfo } from './types'
+import { SystemStatus } from './types'
 import { Loader2, AlertCircle, RefreshCw } from 'lucide-react'
+import { techOpsApi } from './techops/api'
+import { DemoIdentity } from './techops/types'
+import { TechOpsShell } from './techops/layout/TechOpsShell'
+import { DashboardPage } from './techops/pages/DashboardPage'
+import { InvestigationPage } from './techops/pages/InvestigationPage'
 
 function App() {
   const [status, setStatus] = useState<SystemStatus | null>(null)
@@ -13,21 +16,9 @@ function App() {
   
   const { isConnected } = useWebSocket()
 
-  // Mock dataset for demo (will come from backend in production)
-  const [dataset] = useState<DatasetInfo>({
-    filename: 'airline_operations.csv',
-    description: 'Airline operational data including flights, delays, and performance metrics',
-    columns: [
-      { name: 'flight_id', dtype: 'int64' },
-      { name: 'airline', dtype: 'string' },
-      { name: 'departure_delay', dtype: 'float64' },
-      { name: 'arrival_delay', dtype: 'float64' },
-      { name: 'distance', dtype: 'int64' },
-      { name: 'origin', dtype: 'string' },
-      { name: 'destination', dtype: 'string' },
-    ],
-    rowCount: 50000,
-  })
+  const [identity, setIdentity] = useState<DemoIdentity | null>(null)
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'investigation' | 'fleet' | 'reports'>('dashboard')
+  const [activeInvestigationId, setActiveInvestigationId] = useState<string | null>(null)
 
   useEffect(() => {
     apiService.getStatus()
@@ -39,6 +30,15 @@ function App() {
         setError('Failed to connect to DS-Star system')
         setLoading(false)
         console.error('Status fetch error:', err)
+      })
+  }, [])
+
+  useEffect(() => {
+    techOpsApi
+      .getMe()
+      .then(setIdentity)
+      .catch((e) => {
+        console.warn('Failed to load demo identity:', e)
       })
   }, [])
 
@@ -78,13 +78,73 @@ function App() {
     )
   }
 
+  const station = identity?.station || 'DAL'
+
   return (
-    <AppShell status={effectiveStatus}>
-      <InvestigationWorkbench
-        measureName="On-Time Performance"
-        datasetName={dataset.filename}
-      />
-    </AppShell>
+    <TechOpsShell
+      isConnected={effectiveStatus?.status === 'ready'}
+      identity={identity}
+      activeTab={activeTab}
+      onTabChange={(t) => {
+        setActiveTab(t)
+        if (t !== 'investigation') setActiveInvestigationId(null)
+      }}
+      onSwitchIdentity={async () => {
+        // quick cycle identities for demo
+        const next = identity?.id === 'jmartinez' ? 'techops_phx' : identity?.id === 'techops_phx' ? 'reliability_hq' : 'jmartinez'
+        try {
+          const me = await techOpsApi.selectMe(next)
+          setIdentity(me)
+        } catch (e) {
+          console.warn('Failed to switch identity:', e)
+        }
+      }}
+    >
+      {activeTab === 'dashboard' && (
+        <DashboardPage
+          station={station}
+          onOpenInvestigation={async ({ kpi_id, window, point_t }) => {
+            const created = await techOpsApi.createInvestigation({ kpi_id, station, window, point_t })
+            setActiveInvestigationId(created.investigation_id)
+            setActiveTab('investigation')
+          }}
+        />
+      )}
+
+      {activeTab === 'investigation' && activeInvestigationId && (
+        <InvestigationPage
+          investigationId={activeInvestigationId}
+          onBack={() => {
+            setActiveInvestigationId(null)
+            setActiveTab('dashboard')
+          }}
+        />
+      )}
+
+      {activeTab === 'investigation' && !activeInvestigationId && (
+        <div className="px-6 py-6">
+          <div className="max-w-5xl mx-auto bg-white border border-slate-200 rounded-xl p-6 text-slate-700">
+            Select a KPI on the dashboard to start a DS‑STAR investigation.
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'fleet' && (
+        <div className="px-6 py-6">
+          <div className="max-w-5xl mx-auto bg-white border border-slate-200 rounded-xl p-6 text-slate-700">
+            Fleet Status (coming next).
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'reports' && (
+        <div className="px-6 py-6">
+          <div className="max-w-5xl mx-auto bg-white border border-slate-200 rounded-xl p-6 text-slate-700">
+            Reports (coming next).
+          </div>
+        </div>
+      )}
+    </TechOpsShell>
   )
 }
 

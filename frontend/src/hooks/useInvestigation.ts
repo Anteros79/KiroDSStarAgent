@@ -19,7 +19,16 @@ const createInitialInvestigation = (measureName: string): Investigation => ({
 })
 
 // Extended action type to include step ID for ADD_STEP
-type ExtendedInvestigationAction = InvestigationAction | { type: 'ADD_STEP_WITH_ID'; query: string; stepId: string }
+type ExtendedInvestigationAction =
+  | InvestigationAction
+  | { type: 'ADD_STEP_WITH_ID'; query: string; stepId: string }
+  | {
+      type: 'START_ITERATION_WITH_ID'
+      stepId: string
+      iterationId: string
+      iterationNumber?: number
+      description?: string
+    }
 
 // Reducer for investigation state
 function investigationReducer(state: Investigation | null, action: ExtendedInvestigationAction): Investigation | null {
@@ -78,6 +87,35 @@ function investigationReducer(state: Investigation | null, action: ExtendedInves
         response: '',
         verification: { passed: false, assessment: '' },
         status: 'generating',
+        includeInFinal: true,
+      }
+
+      const updatedSteps = [...state.steps]
+      updatedSteps[stepIndex] = {
+        ...step,
+        iterations: [...step.iterations, newIteration],
+        status: 'running',
+      }
+
+      return { ...state, steps: updatedSteps, updatedAt: new Date() }
+    }
+
+    case 'START_ITERATION_WITH_ID': {
+      if (!state) return state
+      const stepIndex = state.steps.findIndex(s => s.id === action.stepId)
+      if (stepIndex === -1) return state
+
+      const step = state.steps[stepIndex]
+      const newIteration: StepIteration = {
+        id: action.iterationId,
+        iterationNumber: action.iterationNumber ?? (step.iterations.length + 1),
+        timestamp: new Date(),
+        description: action.description ?? step.query,
+        generatedCode: '',
+        response: '',
+        verification: { passed: false, assessment: '' },
+        status: 'generating',
+        includeInFinal: true,
       }
 
       const updatedSteps = [...state.steps]
@@ -179,76 +217,80 @@ export function useInvestigation() {
   const [currentStepIndex, setCurrentStepIndex] = useState(0)
   const [isProcessing, setIsProcessing] = useState(false)
   
-  // Track current step/iteration IDs for WebSocket event mapping
-  const currentStepIdRef = useRef<string | null>(null)
-  const currentIterationIdRef = useRef<string | null>(null)
+  // Track pending query so we can attach it to the server-generated step_id
+  const pendingQueryRef = useRef<string | null>(null)
+  const stepsLenRef = useRef(0)
+
+  useEffect(() => {
+    stepsLenRef.current = investigation?.steps?.length ?? 0
+  }, [investigation?.steps?.length])
 
   // Handle WebSocket events
   useEffect(() => {
     const unsubscribe = wsService.subscribe((event: WSEvent) => {
-      const stepId = currentStepIdRef.current
-      const iterationId = currentIterationIdRef.current
-      
-      if (!stepId) return
-
       switch (event.type) {
+        case 'step_started': {
+          const stepId = event.data.step_id as string | undefined
+          if (!stepId) break
+          const query = pendingQueryRef.current || 'Investigation step'
+          pendingQueryRef.current = null
+
+          dispatch({ type: 'ADD_STEP_WITH_ID', query, stepId } as ExtendedInvestigationAction)
+          // jump to the newly created step (index = previous length)
+          setCurrentStepIndex(stepsLenRef.current)
+          break
+        }
+
         case 'iteration_started':
-          // Update iteration ID from server
-          currentIterationIdRef.current = event.data.iteration_id
           dispatch({
-            type: 'START_ITERATION',
-            stepId: stepId,
-          })
+            type: 'START_ITERATION_WITH_ID',
+            stepId: event.data.step_id,
+            iterationId: event.data.iteration_id,
+            iterationNumber: event.data.iteration_number,
+            description: event.data.description,
+          } as ExtendedInvestigationAction)
           break
 
         case 'code_generated':
-          if (iterationId) {
-            dispatch({
-              type: 'UPDATE_ITERATION',
-              stepId: stepId,
-              iterationId: iterationId,
-              updates: { generatedCode: event.data.code, status: 'executing' },
-            })
-          }
+          dispatch({
+            type: 'UPDATE_ITERATION',
+            stepId: event.data.step_id,
+            iterationId: event.data.iteration_id,
+            updates: { generatedCode: event.data.code, status: 'executing' },
+          })
           break
 
         case 'execution_complete':
-          if (iterationId) {
-            dispatch({
-              type: 'UPDATE_ITERATION',
-              stepId: stepId,
-              iterationId: iterationId,
-              updates: {
-                response: event.data.output?.output || '',
-                status: 'verifying',
-              },
-            })
-          }
+          dispatch({
+            type: 'UPDATE_ITERATION',
+            stepId: event.data.step_id,
+            iterationId: event.data.iteration_id,
+            updates: {
+              response: event.data.output?.output || '',
+              status: 'verifying',
+            },
+          })
           break
 
         case 'visualization_ready':
-          if (iterationId) {
-            dispatch({
-              type: 'UPDATE_ITERATION',
-              stepId: stepId,
-              iterationId: iterationId,
-              updates: { visualization: event.data.chart },
-            })
-          }
+          dispatch({
+            type: 'UPDATE_ITERATION',
+            stepId: event.data.step_id,
+            iterationId: event.data.iteration_id,
+            updates: { visualization: event.data.chart },
+          })
           break
 
         case 'verification_complete':
-          if (iterationId) {
-            dispatch({
-              type: 'UPDATE_ITERATION',
-              stepId: stepId,
-              iterationId: iterationId,
-              updates: {
-                verification: event.data.result,
-                status: event.data.result.passed ? 'verified' : 'failed',
-              },
-            })
-          }
+          dispatch({
+            type: 'UPDATE_ITERATION',
+            stepId: event.data.step_id,
+            iterationId: event.data.iteration_id,
+            updates: {
+              verification: event.data.result,
+              status: event.data.result.passed ? 'verified' : 'failed',
+            },
+          })
           setIsProcessing(false)
           break
 
@@ -269,35 +311,26 @@ export function useInvestigation() {
   const startInvestigation = useCallback((measureName: string) => {
     dispatch({ type: 'START_INVESTIGATION', measureName })
     setCurrentStepIndex(0)
-    currentStepIdRef.current = null
-    currentIterationIdRef.current = null
+    pendingQueryRef.current = null
   }, [])
 
   // Run analysis for current step
   const runAnalysis = useCallback((query: string) => {
     if (!investigation || isProcessing) return
 
-    // Generate step ID upfront so we can track it
-    const stepId = generateId()
-    const iterationId = generateId()
-    
-    // Store refs for WebSocket event handling
-    currentStepIdRef.current = stepId
-    currentIterationIdRef.current = iterationId
-
-    // Add new step with known ID
-    dispatch({ type: 'ADD_STEP_WITH_ID', query, stepId } as ExtendedInvestigationAction)
-    
-    // Add initial iteration
-    const newStepIndex = investigation.steps.length
-    setCurrentStepIndex(newStepIndex)
-
-    // Start iteration immediately
-    dispatch({ type: 'START_ITERATION', stepId })
-    
+    pendingQueryRef.current = query
     setIsProcessing(true)
     wsService.startAnalysis(query)
   }, [investigation, isProcessing])
+
+  const setIterationIncluded = useCallback((stepId: string, iterationId: string, includeInFinal: boolean) => {
+    dispatch({
+      type: 'UPDATE_ITERATION',
+      stepId,
+      iterationId,
+      updates: { includeInFinal },
+    })
+  }, [])
 
   // Approve current step and continue
   const approveAndContinue = useCallback((stepId: string, iterationId: string) => {
@@ -311,18 +344,12 @@ export function useInvestigation() {
       setCurrentStepIndex(investigation.steps.length)
     }
     
-    // Clear refs for next step
-    currentStepIdRef.current = null
-    currentIterationIdRef.current = null
+    pendingQueryRef.current = null
   }, [investigation])
 
   // Decline and refine
   const declineAndRefine = useCallback((stepId: string, iterationId: string, feedback: string) => {
     dispatch({ type: 'DECLINE_STEP', stepId, iterationId, feedback })
-    
-    // Generate new iteration ID
-    const newIterationId = generateId()
-    currentIterationIdRef.current = newIterationId
     
     // Trigger new iteration with feedback
     setIsProcessing(true)
@@ -364,5 +391,6 @@ export function useInvestigation() {
     updateNotes,
     saveFinalAnalysis,
     completeInvestigation,
+    setIterationIncluded,
   }
 }

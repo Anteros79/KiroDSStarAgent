@@ -14,6 +14,7 @@ from src.config import Config
 from src.agents.orchestrator import OrchestratorAgent
 from src.handlers.stream_handler import InvestigationStreamHandler
 from src.data.airline_data import initialize_data_loader
+from src.data.techops_metrics import get_techops_store
 
 # Import specialist agents
 from src.agents.specialists.data_analyst import data_analyst
@@ -149,6 +150,18 @@ app.add_middleware(
 # Global state
 orchestrator: Optional[OrchestratorAgent] = None
 config: Optional[Config] = None
+techops = None
+
+# In-memory demo identity + investigations (demo scope)
+_demo_identities = [
+    {"id": "jmartinez", "name": "J. Martinez", "role": "Station Manager", "station": "DAL"},
+    {"id": "techops_phx", "name": "A. Chen", "role": "Tech Ops Analyst", "station": "PHX"},
+    {"id": "reliability_hq", "name": "R. Patel", "role": "Reliability Eng", "station": "HOU"},
+]
+_current_identity_id = "jmartinez"
+
+# investigations: id -> record
+_techops_investigations: Dict[str, Dict[str, Any]] = {}
 
 
 # Request/Response models
@@ -196,11 +209,90 @@ class AnalyzeRequest(BaseModel):
     dataset_path: Optional[str] = None
 
 
+class DemoIdentity(BaseModel):
+    id: str
+    name: str
+    role: str
+    station: str
+
+
+class SelectIdentityRequest(BaseModel):
+    identity_id: str
+
+
+class KPIDefinition(BaseModel):
+    id: str
+    label: str
+    unit: str
+    goal: float
+    ul: float
+    ll: float
+    decimals: int
+
+
+class MetricPoint(BaseModel):
+    t: str
+    value: float
+    yoy_value: Optional[float] = None
+    yoy_delta: Optional[float] = None
+    signal_state: str
+
+
+class KPISeriesResponse(BaseModel):
+    kpi: KPIDefinition
+    points: list[MetricPoint]
+    mean: float
+    past_value: float
+    past_delta: float
+    signal_state: str
+
+
+class DashboardResponse(BaseModel):
+    station: str
+    window: str  # "weekly" | "daily"
+    kpis: list[KPISeriesResponse]
+
+
+class CreateInvestigationRequest(BaseModel):
+    kpi_id: str
+    station: str
+    window: str  # "weekly" | "daily"
+    point_t: Optional[str] = None  # clicked point (date or week_start)
+
+
+class CreateInvestigationResponse(BaseModel):
+    investigation_id: str
+    prompt_mode: str  # "cause" | "yoy"
+    prompt: str
+
+
+class InvestigationRecord(BaseModel):
+    investigation_id: str
+    kpi_id: str
+    station: str
+    window: str
+    created_by: DemoIdentity
+    created_at: str
+    status: str
+    prompt_mode: str
+    prompt: str
+    selected_point_t: Optional[str] = None
+    final_root_cause: Optional[str] = None
+    final_actions: list[str] = []
+    final_notes: Optional[str] = None
+
+
+class FinalizeInvestigationRequest(BaseModel):
+    final_root_cause: str
+    final_actions: list[str] = []
+    final_notes: Optional[str] = None
+
+
 # Startup event
 @app.on_event("startup")
 async def startup_event():
     """Initialize the DS-Star system on startup."""
-    global orchestrator, config
+    global orchestrator, config, techops
     
     try:
         logger.info("Starting DS-Star API server...")
@@ -211,8 +303,25 @@ async def startup_event():
         
         # Initialize data loader
         logger.info("Loading airline operations dataset...")
+        # If data file is missing, generate it (mirrors CLI behavior)
+        from pathlib import Path
+        data_file_path = Path(config.data_path)
+        if not data_file_path.exists():
+            logger.warning(f"Data file not found: {config.data_path}")
+            logger.info("Generating sample airline operations dataset...")
+            from src.data.generate_sample_data import generate_dataset, save_to_csv
+
+            records = generate_dataset(num_records=1200)
+            save_to_csv(records, config.data_path)
+            logger.info(f"✓ Generated {len(records)} flight records")
+            logger.info(f"✓ Sample dataset saved to {config.data_path}")
+
         initialize_data_loader(config.data_path)
         logger.info("✓ Airline data loaded")
+
+        # Initialize Tech Ops demo store
+        techops = get_techops_store()
+        logger.info("✓ Tech Ops demo metrics initialized")
         
         # Initialize stream handler
         stream_handler = InvestigationStreamHandler(verbose=config.verbose)
@@ -221,29 +330,33 @@ async def startup_event():
         model = None
         if config.model_provider == "ollama":
             if OllamaModel is None:
-                logger.warning("OllamaModel not available - running in mock mode")
-                return
-            
-            logger.info(f"Connecting to Ollama at {config.ollama_host}...")
-            model = OllamaModel(
-                model_id=config.model_id,
-                host=config.ollama_host,
-            )
-            logger.info(f"✓ Ollama model initialized: {config.model_id}")
+                logger.warning(
+                    "OllamaModel not available (strands-agents not installed) - continuing in mock mode"
+                )
+                model = None
+            else:
+                logger.info(f"Connecting to Ollama at {config.ollama_host}...")
+                model = OllamaModel(
+                    model_id=config.model_id,
+                    host=config.ollama_host,
+                )
+                logger.info(f"✓ Ollama model initialized: {config.model_id}")
         else:
             # Default to Bedrock
             if BedrockModel is None:
-                logger.warning("BedrockModel not available - running in mock mode")
-                return
-            
-            logger.info("Connecting to Amazon Bedrock...")
-            model = BedrockModel(
-                model_id=config.model_id,
-                region=config.region,
-                max_tokens=config.max_tokens,
-                temperature=config.temperature
-            )
-            logger.info(f"✓ Bedrock model initialized: {config.model_id}")
+                logger.warning(
+                    "BedrockModel not available (strands-agents not installed) - continuing in mock mode"
+                )
+                model = None
+            else:
+                logger.info("Connecting to Amazon Bedrock...")
+                model = BedrockModel(
+                    model_id=config.model_id,
+                    region=config.region,
+                    max_tokens=config.max_tokens,
+                    temperature=config.temperature
+                )
+                logger.info(f"✓ Bedrock model initialized: {config.model_id}")
         
         # Create specialist agents dictionary
         specialists = {
@@ -310,6 +423,173 @@ async def get_status():
         data_loaded=True,
         dataset_info=dataset_info
     )
+
+
+@app.get("/api/me", response_model=DemoIdentity)
+async def get_me():
+    """Return the current demo identity (no-auth)."""
+    identity = next((i for i in _demo_identities if i["id"] == _current_identity_id), _demo_identities[0])
+    return DemoIdentity(**identity)
+
+
+@app.post("/api/me/select", response_model=DemoIdentity)
+async def select_me(req: SelectIdentityRequest):
+    """Select the current demo identity."""
+    global _current_identity_id
+    identity = next((i for i in _demo_identities if i["id"] == req.identity_id), None)
+    if not identity:
+        raise HTTPException(status_code=400, detail="Unknown identity_id")
+    _current_identity_id = identity["id"]
+    return DemoIdentity(**identity)
+
+
+@app.get("/api/techops/kpis", response_model=list[KPIDefinition])
+async def techops_kpis():
+    store = get_techops_store()
+    return [
+        KPIDefinition(
+            id=k.id,
+            label=k.label,
+            unit=k.unit,
+            goal=k.goal,
+            ul=k.ul,
+            ll=k.ll,
+            decimals=k.decimals,
+        )
+        for k in store.get_kpis()
+    ]
+
+
+def _series_to_response(series) -> KPISeriesResponse:
+    k = series.kpi
+    return KPISeriesResponse(
+        kpi=KPIDefinition(id=k.id, label=k.label, unit=k.unit, goal=k.goal, ul=k.ul, ll=k.ll, decimals=k.decimals),
+        points=[
+            MetricPoint(
+                t=p.t,
+                value=p.value,
+                yoy_value=p.yoy_value,
+                yoy_delta=p.yoy_delta,
+                signal_state=p.signal_state,
+            )
+            for p in series.points
+        ],
+        mean=series.mean,
+        past_value=series.past_value,
+        past_delta=series.past_delta,
+        signal_state=series.signal_state,
+    )
+
+
+@app.get("/api/techops/dashboard/weekly", response_model=DashboardResponse)
+async def techops_dashboard_weekly(station: str = "DAL"):
+    store = get_techops_store()
+    series_map = store.get_weekly_series(station=station, weeks=53)
+    return DashboardResponse(
+        station=station,
+        window="weekly",
+        kpis=[_series_to_response(series_map[kpi_id]) for kpi_id in series_map],
+    )
+
+
+@app.get("/api/techops/dashboard/daily", response_model=DashboardResponse)
+async def techops_dashboard_daily(station: str = "DAL"):
+    store = get_techops_store()
+    series_map = store.get_daily_series(station=station, days=30)
+    return DashboardResponse(
+        station=station,
+        window="daily",
+        kpis=[_series_to_response(series_map[kpi_id]) for kpi_id in series_map],
+    )
+
+
+@app.get("/api/techops/signals/active")
+async def techops_active_signals(station: str = "DAL"):
+    """Return active signals (warning/critical) for station based on most recent weekly values."""
+    store = get_techops_store()
+    series_map = store.get_weekly_series(station=station, weeks=53)
+    signals = []
+    for kpi_id, s in series_map.items():
+        if s.signal_state != "none":
+            signals.append(
+                {
+                    "signal_id": f"SIG-{station}-{kpi_id}",
+                    "kpi_id": kpi_id,
+                    "station": station,
+                    "status": s.signal_state,
+                    "detected_at": datetime.utcnow().isoformat(),
+                    "latest_value": s.past_value,
+                }
+            )
+    return {"station": station, "signals": signals}
+
+
+@app.post("/api/techops/investigations", response_model=CreateInvestigationResponse)
+async def techops_create_investigation(req: CreateInvestigationRequest):
+    """Create a new investigation seeded from a KPI click."""
+    store = get_techops_store()
+    series_map = store.get_weekly_series(station=req.station, weeks=53) if req.window == "weekly" else store.get_daily_series(station=req.station, days=30)
+    if req.kpi_id not in series_map:
+        raise HTTPException(status_code=400, detail="Unknown kpi_id")
+
+    series = series_map[req.kpi_id]
+    # Determine prompt mode
+    prompt_mode = "cause" if series.signal_state != "none" else "yoy"
+    prompt = "What is the cause of this signal?" if prompt_mode == "cause" else "How does this compare to year over year performance?"
+
+    # Identity
+    identity = next((i for i in _demo_identities if i["id"] == _current_identity_id), _demo_identities[0])
+
+    import uuid
+
+    inv_id = f"INV-{uuid.uuid4().hex[:8].upper()}"
+    record = {
+        "investigation_id": inv_id,
+        "kpi_id": req.kpi_id,
+        "station": req.station,
+        "window": req.window,
+        "created_by": identity,
+        "created_at": datetime.utcnow().isoformat(),
+        "status": "open",
+        "prompt_mode": prompt_mode,
+        "prompt": prompt,
+        "selected_point_t": req.point_t,
+    }
+    _techops_investigations[inv_id] = record
+    return CreateInvestigationResponse(investigation_id=inv_id, prompt_mode=prompt_mode, prompt=prompt)
+
+
+@app.get("/api/techops/investigations", response_model=list[InvestigationRecord])
+async def techops_list_investigations(station: Optional[str] = None):
+    out = []
+    for inv in _techops_investigations.values():
+        if station and inv["station"] != station:
+            continue
+        out.append(InvestigationRecord(**inv))
+    # newest first
+    out.sort(key=lambda r: r.created_at, reverse=True)
+    return out
+
+
+@app.get("/api/techops/investigations/{investigation_id}", response_model=InvestigationRecord)
+async def techops_get_investigation(investigation_id: str):
+    inv = _techops_investigations.get(investigation_id)
+    if not inv:
+        raise HTTPException(status_code=404, detail="Not found")
+    return InvestigationRecord(**inv)
+
+
+@app.post("/api/techops/investigations/{investigation_id}/finalize", response_model=InvestigationRecord)
+async def techops_finalize_investigation(investigation_id: str, req: FinalizeInvestigationRequest):
+    inv = _techops_investigations.get(investigation_id)
+    if not inv:
+        raise HTTPException(status_code=404, detail="Not found")
+    inv["final_root_cause"] = req.final_root_cause
+    inv["final_actions"] = req.final_actions
+    inv["final_notes"] = req.final_notes
+    inv["status"] = "finalized"
+    _techops_investigations[investigation_id] = inv
+    return InvestigationRecord(**inv)
 
 
 # Query endpoint (REST)
@@ -505,6 +785,12 @@ async def websocket_stream(websocket: WebSocket):
                         "data": {"message": "Research goal is required"},
                     })
                     continue
+
+                max_iterations = int(data.get("data", {}).get("max_iterations", 20))
+                if max_iterations < 1:
+                    max_iterations = 1
+                if max_iterations > 20:
+                    max_iterations = 20
                 
                 # Generate analysis ID
                 import uuid
@@ -528,133 +814,112 @@ async def websocket_stream(websocket: WebSocket):
                         "step_number": 1,
                     },
                 })
-                
-                # Start iteration 1
-                iteration_id = f"iter-{uuid.uuid4().hex[:6]}"
-                await websocket.send_json({
-                    "type": "iteration_started",
-                    "data": {
-                        "step_id": step_id,
-                        "iteration_id": iteration_id,
-                        "iteration_number": 1,
-                        "description": f"Analyzing: {research_goal}",
-                    },
-                })
-                
-                # Process through orchestrator
-                try:
-                    context = {
-                        "output_dir": config.output_dir,
-                        "data_path": config.data_path
-                    }
-                    
-                    response = orchestrator.process(research_goal, context)
-                    
-                    # Extract code from specialist response (look for code blocks in response text)
-                    code = "# Analysis code\nimport pandas as pd\n\n# Load and analyze data\ndf = pd.read_csv('data/airline_operations.csv')\nprint(df.describe())"
-                    if response.specialist_responses:
-                        # Try to extract Python code from the response
-                        resp_text = response.specialist_responses[0].response
-                        if "```python" in resp_text:
-                            # Extract code between ```python and ```
-                            import re
-                            code_match = re.search(r'```python\n(.*?)```', resp_text, re.DOTALL)
-                            if code_match:
-                                code = code_match.group(1).strip()
-                        elif "```" in resp_text:
-                            code_match = re.search(r'```\n(.*?)```', resp_text, re.DOTALL)
-                            if code_match:
-                                code = code_match.group(1).strip()
-                    
+
+                # Loop up to 20 iterations (DS-STAR style) to refine until "satisfied"
+                last_output = ""
+                for i in range(1, max_iterations + 1):
+                    iteration_id = f"iter-{uuid.uuid4().hex[:6]}"
                     await websocket.send_json({
-                        "type": "code_generated",
+                        "type": "iteration_started",
                         "data": {
                             "step_id": step_id,
                             "iteration_id": iteration_id,
-                            "code": code,
+                            "iteration_number": i,
+                            "description": "Initial investigation" if i == 1 else f"Refinement iteration {i}",
                         },
                     })
-                    
-                    # Send execution complete event
-                    await websocket.send_json({
-                        "type": "execution_complete",
-                        "data": {
-                            "step_id": step_id,
-                            "iteration_id": iteration_id,
-                            "output": {
-                                "success": True,
-                                "output": response.synthesized_response if response.synthesized_response else "Analysis completed successfully.",
-                                "duration_ms": response.total_time_ms,
+
+                    try:
+                        context = {
+                            "output_dir": config.output_dir,
+                            "data_path": config.data_path,
+                            "iteration": i,
+                            "previous_summary": last_output[:1200] if last_output else "",
+                        }
+
+                        iteration_query = research_goal
+                        if i > 1 and last_output:
+                            iteration_query = (
+                                f"{research_goal}\n\n"
+                                f"Refine the investigation using prior findings. "
+                                f"Prior findings (truncated):\n{last_output[:800]}"
+                            )
+
+                        response = orchestrator.process(iteration_query, context)
+                        last_output = response.synthesized_response or last_output
+
+                        # Extract code from specialist response (best-effort)
+                        code = "# Analysis code\n# (demo)\nprint('Analyzing...')"
+                        if response.specialist_responses:
+                            resp_text = response.specialist_responses[0].response
+                            if "```python" in resp_text:
+                                import re
+                                code_match = re.search(r'```python\n(.*?)```', resp_text, re.DOTALL)
+                                if code_match:
+                                    code = code_match.group(1).strip()
+
+                        await websocket.send_json({
+                            "type": "code_generated",
+                            "data": {
+                                "step_id": step_id,
+                                "iteration_id": iteration_id,
+                                "code": code,
                             },
-                        },
-                    })
-                    
-                    # Generate visualization from response data
-                    chart_sent = False
-                    
-                    # Try to generate chart from the response
-                    if response.synthesized_response:
-                        chart_data = generate_chart_from_response(response.synthesized_response, research_goal)
-                        if chart_data:
-                            await websocket.send_json({
-                                "type": "visualization_ready",
-                                "data": {
-                                    "step_id": step_id,
-                                    "iteration_id": iteration_id,
-                                    "chart": chart_data,
+                        })
+
+                        await websocket.send_json({
+                            "type": "execution_complete",
+                            "data": {
+                                "step_id": step_id,
+                                "iteration_id": iteration_id,
+                                "output": {
+                                    "success": True,
+                                    "output": response.synthesized_response or "Analysis completed successfully.",
+                                    "duration_ms": response.total_time_ms,
                                 },
-                            })
-                            chart_sent = True
-                    
-                    # Also send any charts from the response
-                    if response.charts and not chart_sent:
-                        for chart in response.charts:
-                            chart_data = chart.__dict__ if hasattr(chart, '__dict__') else chart
-                            await websocket.send_json({
-                                "type": "visualization_ready",
-                                "data": {
-                                    "step_id": step_id,
-                                    "iteration_id": iteration_id,
-                                    "chart": {
-                                        "chart_type": chart_data.get("chart_type", "bar"),
-                                        "title": chart_data.get("title", "Analysis Results"),
-                                        "plotly_json": chart_data.get("plotly_json", {}),
+                            },
+                        })
+
+                        # Visualization (best-effort)
+                        if response.synthesized_response:
+                            chart_data = generate_chart_from_response(response.synthesized_response, research_goal)
+                            if chart_data:
+                                await websocket.send_json({
+                                    "type": "visualization_ready",
+                                    "data": {
+                                        "step_id": step_id,
+                                        "iteration_id": iteration_id,
+                                        "chart": chart_data,
                                     },
+                                })
+
+                        await websocket.send_json({
+                            "type": "verification_complete",
+                            "data": {
+                                "step_id": step_id,
+                                "iteration_id": iteration_id,
+                                "result": {
+                                    "passed": True,
+                                    "assessment": f"Iteration {i} completed. Review findings and decide what to include in final.",
+                                    "suggestions": [],
                                 },
-                            })
-                    
-                    # Send verification complete event
-                    await websocket.send_json({
-                        "type": "verification_complete",
-                        "data": {
-                            "step_id": step_id,
-                            "iteration_id": iteration_id,
-                            "result": {
-                                "passed": True,
-                                "assessment": "The analysis successfully addressed the research goal. The results are statistically valid and the visualizations clearly communicate the findings.",
-                                "suggestions": [],
                             },
-                        },
-                    })
-                    
-                    # Mark step as completed
-                    await websocket.send_json({
-                        "type": "step_completed",
-                        "data": {"step_id": step_id},
-                    })
-                    
-                    # Mark analysis as completed
-                    await websocket.send_json({
-                        "type": "analysis_completed",
-                        "data": {"analysis_id": analysis_id},
-                    })
-                    
-                except Exception as e:
-                    logger.error(f"Analysis error: {e}", exc_info=True)
-                    await websocket.send_json({
-                        "type": "error",
-                        "data": {"message": str(e)},
-                    })
+                        })
+
+                        # Stop early if output looks like a final conclusion
+                        if response.synthesized_response and ("final" in response.synthesized_response.lower() or "root cause" in response.synthesized_response.lower()):
+                            break
+
+                    except Exception as e:
+                        logger.error(f"Analysis error: {e}", exc_info=True)
+                        await websocket.send_json({
+                            "type": "error",
+                            "data": {"message": str(e)},
+                        })
+                        break
+
+                await websocket.send_json({"type": "step_completed", "data": {"step_id": step_id}})
+                await websocket.send_json({"type": "analysis_completed", "data": {"analysis_id": analysis_id}})
             
             elif event_type == "approve_step":
                 # Handle step approval - continue to next step
