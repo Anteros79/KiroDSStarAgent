@@ -8,6 +8,7 @@ import json
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from src.config import Config
@@ -502,6 +503,25 @@ async def startup_event():
 async def health_check():
     """Check if the API is running."""
     return {"status": "healthy", "timestamp": datetime.utcnow().isoformat()}
+
+
+@app.get("/")
+async def root():
+    """Friendly landing endpoint (avoids FastAPI default 404 at '/')."""
+    return JSONResponse(
+        {
+            "name": "DS-STAR API",
+            "health": "/health",
+            "status": "/api/status",
+            "docs": "/docs",
+            "techops": {
+                "kpis": "/api/techops/kpis",
+                "dashboard_weekly": "/api/techops/dashboard/weekly?station=DAL",
+                "dashboard_daily": "/api/techops/dashboard/daily?station=DAL",
+            },
+            "websockets": {"query": "/ws/query", "stream": "/ws/stream"},
+        }
+    )
 
 
 # System status endpoint
