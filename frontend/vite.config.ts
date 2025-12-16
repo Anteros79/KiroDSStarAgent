@@ -5,14 +5,16 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
-    port: 3000,
+    // Allow `start_application.bat` (or devs) to choose ports dynamically.
+    // Defaults preserve the current behavior if env vars are not provided.
+    port: Number.parseInt(process.env.VITE_DEV_PORT ?? '3000', 10),
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        target: `http://localhost:${process.env.VITE_BACKEND_PORT ?? '8000'}`,
         changeOrigin: true,
       },
       '/ws': {
-        target: 'ws://localhost:8000',
+        target: `ws://localhost:${process.env.VITE_BACKEND_PORT ?? '8000'}`,
         ws: true,
       },
     },
