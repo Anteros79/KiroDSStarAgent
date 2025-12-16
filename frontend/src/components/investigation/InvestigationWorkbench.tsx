@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useInvestigation } from '../../hooks/useInvestigation'
 import { StepSlider } from './StepSlider'
 import { NotesPanel } from './NotesPanel'
@@ -10,11 +10,15 @@ import { Play, Loader2, HelpCircle, CheckCircle2, Database } from 'lucide-react'
 interface InvestigationWorkbenchProps {
   measureName?: string
   datasetName?: string
+  initialQuery?: string
+  autoRunInitialQuery?: boolean
 }
 
 export function InvestigationWorkbench({ 
   measureName = 'On-Time Performance', 
-  datasetName = 'airline_operations.csv' 
+  datasetName = 'airline_operations.csv',
+  initialQuery,
+  autoRunInitialQuery = false,
 }: InvestigationWorkbenchProps) {
   // Show dataset name in header
   const _datasetName = datasetName
@@ -30,9 +34,11 @@ export function InvestigationWorkbench({
     updateNotes,
     saveFinalAnalysis,
     completeInvestigation,
+    setIterationIncluded,
   } = useInvestigation()
 
   const [query, setQuery] = useState('')
+  const autoRanRef = useRef(false)
 
   // Start investigation on mount
   useEffect(() => {
@@ -44,9 +50,26 @@ export function InvestigationWorkbench({
   // Set initial query based on hypothesis
   useEffect(() => {
     if (investigation && !query && investigation.steps.length === 0) {
-      setQuery(`Why is "${measureName}" signaling? What factors are driving this metric?`)
+      setQuery(initialQuery || `Why is "${measureName}" signaling? What factors are driving this metric?`)
     }
-  }, [investigation, measureName, query])
+  }, [investigation, measureName, query, initialQuery])
+
+  // Optionally auto-run the initial query (demo flow for Tech Ops)
+  useEffect(() => {
+    if (!autoRunInitialQuery) return
+    if (!investigation) return
+    if (investigation.steps.length > 0) return
+    if (isProcessing) return
+    if (autoRanRef.current) return
+
+    const q = (initialQuery || query).trim()
+    if (!q) return
+
+    autoRanRef.current = true
+    runAnalysis(q)
+    setQuery('')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoRunInitialQuery, investigation, isProcessing, initialQuery, query, runAnalysis])
 
   const handleRunAnalysis = () => {
     if (query.trim() && !isProcessing) {
@@ -122,9 +145,20 @@ export function InvestigationWorkbench({
               {currentStep.iterations.map((iteration) => (
                 <div key={iteration.id} className="card-elevated">
                   <div className="flex items-center justify-between mb-4">
-                    <span className="font-semibold text-slate-700">
-                      Iteration {iteration.iterationNumber}
-                    </span>
+                    <div className="flex items-center gap-3">
+                      <span className="font-semibold text-slate-700">
+                        Iteration {iteration.iterationNumber}
+                      </span>
+                      <label className="flex items-center gap-2 text-xs text-slate-600">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-slate-300"
+                          checked={iteration.includeInFinal !== false}
+                          onChange={(e) => setIterationIncluded(currentStep.id, iteration.id, e.target.checked)}
+                        />
+                        Include in final
+                      </label>
+                    </div>
                     <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                       iteration.status === 'verified' ? 'bg-green-100 text-green-700' : 
                       iteration.status === 'failed' ? 'bg-red-100 text-red-700' :

@@ -31,7 +31,7 @@ class Config:
     """
     
     model_provider: str = "ollama"  # "ollama" or "bedrock"
-    model_id: str = "gemma3:4b"  # Default to local Ollama Gemma 3 4B (faster on CPU)
+    model_id: str = "gemma3:27b"  # Default to local Ollama Gemma 3 27B
     ollama_host: str = "http://localhost:11434"
     region: str = "us-west-2"
     verbose: bool = False
