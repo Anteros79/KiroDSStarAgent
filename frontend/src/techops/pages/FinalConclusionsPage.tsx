@@ -68,7 +68,7 @@ export function FinalConclusionsPage({
       })
     }
 
-    for (const d of inv.diagnostics || []) {
+    for (const d of Array.from(new Map((inv.diagnostics || []).map((x) => [x.name, x])).values())) {
       out.push({
         key: `diag:${d.name}`,
         item: {
@@ -354,5 +354,4 @@ export function FinalConclusionsPage({
     </div>
   )
 }
-
 

@@ -25,9 +25,15 @@ REM Start backend in a new window
 set "BACKEND_CMD=python -m uvicorn src.api.server:app --host 127.0.0.1 --port %BACKEND_PORT%"
 start "DS-STAR Backend" cmd /k "%BACKEND_CMD%"
 
-REM Start frontend in a new window, wiring proxy to the chosen backend port
-set "FRONTEND_CMD=cd /d \"%CD%\\frontend\" ^&^& set VITE_BACKEND_PORT=%BACKEND_PORT% ^&^& set VITE_DEV_PORT=%FRONTEND_PORT% ^&^& npm run dev -- --port %FRONTEND_PORT% --strictPort"
-start "DS-STAR Frontend" cmd /k "%FRONTEND_CMD%"
+REM Start frontend in a new window, wiring proxy to the chosen backend port.
+REM Use `start ... /D` to avoid nested-quote path issues (common cause of:
+REM "The filename, directory name, or volume label syntax is incorrect.")
+set "FRONTEND_DIR=%CD%\frontend"
+if not exist "%FRONTEND_DIR%" (
+  echo Frontend directory not found: %FRONTEND_DIR%
+) else (
+  start "DS-STAR Frontend" /D "%FRONTEND_DIR%" cmd /k "set VITE_BACKEND_PORT=%BACKEND_PORT% && set VITE_DEV_PORT=%FRONTEND_PORT% && npm run dev -- --host 127.0.0.1 --port %FRONTEND_PORT% --strictPort"
+)
 
 REM Open the browser to the chosen frontend URL
 set "APP_URL=http://127.0.0.1:%FRONTEND_PORT%/"
@@ -52,5 +58,4 @@ if not errorlevel 1 (
 )
 set "%~2=%P%"
 exit /b 0
-
 

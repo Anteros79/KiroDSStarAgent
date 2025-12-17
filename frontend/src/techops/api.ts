@@ -46,16 +46,22 @@ export const techOpsApi = {
     return request<TechOpsKPI[]>('/techops/kpis')
   },
 
-  getDashboardWeekly(station: string): Promise<TechOpsDashboardResponse> {
-    return request<TechOpsDashboardResponse>(`/techops/dashboard/weekly?station=${encodeURIComponent(station)}`)
+  getDashboardWeekly(station: string, summary_level: string = 'station'): Promise<TechOpsDashboardResponse> {
+    return request<TechOpsDashboardResponse>(
+      `/techops/dashboard/weekly?station=${encodeURIComponent(station)}&summary_level=${encodeURIComponent(summary_level)}`
+    )
   },
 
-  getDashboardDaily(station: string): Promise<TechOpsDashboardResponse> {
-    return request<TechOpsDashboardResponse>(`/techops/dashboard/daily?station=${encodeURIComponent(station)}`)
+  getDashboardDaily(station: string, summary_level: string = 'station'): Promise<TechOpsDashboardResponse> {
+    return request<TechOpsDashboardResponse>(
+      `/techops/dashboard/daily?station=${encodeURIComponent(station)}&summary_level=${encodeURIComponent(summary_level)}`
+    )
   },
 
-  getActiveSignals(station: string): Promise<ActiveSignalsResponse> {
-    return request<ActiveSignalsResponse>(`/techops/signals/active?station=${encodeURIComponent(station)}`)
+  getActiveSignals(station: string, summary_level: string = 'station'): Promise<ActiveSignalsResponse> {
+    return request<ActiveSignalsResponse>(
+      `/techops/signals/active?station=${encodeURIComponent(station)}&summary_level=${encodeURIComponent(summary_level)}`
+    )
   },
 
   // Investigations
@@ -82,5 +88,4 @@ export const techOpsApi = {
     })
   },
 }
-
 

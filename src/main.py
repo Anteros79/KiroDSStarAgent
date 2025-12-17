@@ -231,11 +231,18 @@ class DSStarCLI:
         """Display welcome message and system information."""
         print("\n" + "=" * 70)
         print("  DS-Star Multi-Agent System")
-        print("  Powered by Amazon Nova Lite via AWS Bedrock")
+        if self.config.model_provider == "ollama":
+            print(f"  Provider: Ollama ({self.config.ollama_host})")
+        else:
+            print(f"  Provider: Amazon Bedrock ({self.config.region})")
         print("=" * 70)
         print(f"\nConfiguration:")
+        print(f"  Provider: {self.config.model_provider}")
         print(f"  Model: {self.config.model_id}")
-        print(f"  Region: {self.config.region}")
+        if self.config.model_provider == "ollama":
+            print(f"  Ollama Host: {self.config.ollama_host}")
+        else:
+            print(f"  Region: {self.config.region}")
         print(f"  Verbose: {self.config.verbose}")
         print(f"  Output Directory: {self.config.output_dir}")
         print(f"  Data Path: {self.config.data_path}")
@@ -416,12 +423,17 @@ Examples:
   # Run in verbose mode
   python -m src.main --verbose
   
-  # Use a different model
-  python -m src.main --model us.amazon.nova-pro-v1:0
+  # Use a different local Ollama model
+  python -m src.main --provider ollama --model llama3.1:8b
+  
+  # Use Bedrock with an Amazon Nova model
+  python -m src.main --provider bedrock --model us.amazon.nova-lite-v1:0 --region us-west-2
   
 Environment Variables:
-  DS_STAR_MODEL_ID       - Bedrock model ID
-  DS_STAR_REGION         - AWS region
+  DS_STAR_MODEL_PROVIDER - "ollama" or "bedrock"
+  DS_STAR_MODEL_ID       - Model ID (Ollama tag or Bedrock model ID)
+  DS_STAR_OLLAMA_HOST    - Ollama host URL (default: http://localhost:11434)
+  DS_STAR_REGION         - AWS region (or use AWS_REGION)
   AWS_REGION             - AWS region (alternative)
   DS_STAR_VERBOSE        - Enable verbose mode (true/false)
   DS_STAR_OUTPUT_DIR     - Output directory path
@@ -436,15 +448,28 @@ Environment Variables:
     )
     
     parser.add_argument(
+        "--provider",
+        type=str,
+        choices=["ollama", "bedrock"],
+        help="Model provider: ollama or bedrock (default: ollama)"
+    )
+
+    parser.add_argument(
         "--model",
         type=str,
-        help="Bedrock model ID (default: us.amazon.nova-lite-v1:0)"
+        help="Model ID (e.g., gemma3:27b for Ollama, us.amazon.nova-lite-v1:0 for Bedrock)"
     )
     
     parser.add_argument(
         "--region",
         type=str,
         help="AWS region (default: us-west-2)"
+    )
+
+    parser.add_argument(
+        "--ollama-host",
+        type=str,
+        help="Ollama host URL (default: http://localhost:11434)"
     )
     
     parser.add_argument(
@@ -485,22 +510,36 @@ def main() -> int:
             config = Config.load()
         
         # Override with CLI arguments if provided
+        if getattr(args, "provider", None):
+            config.model_provider = args.provider
         if args.model:
             config.model_id = args.model
         if args.region:
             config.region = args.region
+        if getattr(args, "ollama_host", None):
+            config.ollama_host = args.ollama_host
         if args.verbose:
             config.verbose = True
         if args.output_dir:
             config.output_dir = args.output_dir
         if args.data_path:
             config.data_path = args.data_path
+
+        # If provider is Bedrock but the CLI didn't specify a model, use the Bedrock default.
+        if getattr(args, "provider", None) == "bedrock" and not args.model:
+            from src.config import DEFAULT_BEDROCK_MODEL_ID
+
+            config.model_id = DEFAULT_BEDROCK_MODEL_ID
         
         # Create CLI instance
         cli = DSStarCLI(config)
         
         # Validate credentials
         if not cli.validate_credentials():
+            if config.model_provider == "ollama":
+                print("\nFailed to validate Ollama connection.")
+                print("Ensure Ollama is running and the model is pulled.")
+                return 1
             print("\n✗ Failed to validate AWS Bedrock credentials.")
             print("Please configure your AWS credentials and try again.")
             return 1

@@ -21,6 +21,7 @@ function App() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'investigation' | 'fleet' | 'reports'>('dashboard')
   const [activeInvestigationId, setActiveInvestigationId] = useState<string | null>(null)
   const [investigationView, setInvestigationView] = useState<'workbench' | 'final'>('workbench')
+  const [summaryLevel, setSummaryLevel] = useState<'station' | 'region' | 'company'>('station')
 
   useEffect(() => {
     apiService.getStatus()
@@ -85,8 +86,11 @@ function App() {
   return (
     <TechOpsShell
       isConnected={effectiveStatus?.status === 'ready'}
+      model={effectiveStatus?.model}
       identity={identity}
       activeTab={activeTab}
+      summaryLevel={summaryLevel}
+      onSummaryLevelChange={setSummaryLevel}
       onTabChange={(t) => {
         setActiveTab(t)
         if (t !== 'investigation') setActiveInvestigationId(null)
@@ -106,8 +110,9 @@ function App() {
       {activeTab === 'dashboard' && (
         <DashboardPage
           station={station}
+          summaryLevel={summaryLevel}
           onOpenInvestigation={async ({ kpi_id, window, point_t }) => {
-            const created = await techOpsApi.createInvestigation({ kpi_id, station, window, point_t })
+            const created = await techOpsApi.createInvestigation({ kpi_id, station, window, point_t, summary_level: summaryLevel })
             setActiveInvestigationId(created.investigation_id)
             setInvestigationView('workbench')
             setActiveTab('investigation')

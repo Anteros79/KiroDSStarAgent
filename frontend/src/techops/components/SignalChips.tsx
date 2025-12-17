@@ -6,7 +6,13 @@ function badgeClasses(status: string) {
   return 'bg-slate-50 text-slate-700 border-slate-200'
 }
 
-export function SignalChips({ signals }: { signals: ActiveSignalsResponse | null }) {
+export function SignalChips({
+  signals,
+  onClickSignal,
+}: {
+  signals: ActiveSignalsResponse | null
+  onClickSignal?: (args: { kpi_id: string; window?: 'weekly' | 'daily'; point_t?: string }) => void
+}) {
   const list = signals?.signals ?? []
 
   return (
@@ -18,21 +24,25 @@ export function SignalChips({ signals }: { signals: ActiveSignalsResponse | null
         </span>
       ) : (
         list.map((s) => (
-          <span
+          <button
             key={s.signal_id}
             className={[
               'inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold border',
               badgeClasses(s.status),
+              onClickSignal ? 'hover:opacity-90 cursor-pointer' : 'cursor-default',
             ].join(' ')}
             title={`${s.signal_id} (${s.kpi_id})`}
+            type="button"
+            onClick={() => {
+              if (!onClickSignal) return
+              onClickSignal({ kpi_id: s.kpi_id, window: s.window, point_t: s.latest_point_t || undefined })
+            }}
           >
             <span className="inline-block h-2 w-2 rounded-full bg-current opacity-60" />
-            {s.kpi_id.replaceAll('_', ' ')}
-          </span>
+            {s.kpi_id.split('_').join(' ')}
+          </button>
         ))
       )}
     </div>
   )
 }
-
-

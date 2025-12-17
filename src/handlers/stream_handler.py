@@ -7,6 +7,7 @@ and intermediate results during query processing.
 from typing import Any, Dict, Optional
 from datetime import datetime
 import json
+import sys
 
 
 class InvestigationStreamHandler:
@@ -40,7 +41,15 @@ class InvestigationStreamHandler:
             indent_offset: Additional indentation levels (can be negative)
         """
         indent = "  " * max(0, self._indent_level + indent_offset)
-        print(f"{indent}{message}")
+        out = f"{indent}{message}"
+        try:
+            print(out)
+        except UnicodeEncodeError:
+            # Some Windows consoles default to a legacy codepage and will throw on
+            # non-ASCII glyphs; degrade safely rather than crashing the server.
+            enc = getattr(sys.stdout, "encoding", None) or "utf-8"
+            safe = out.encode(enc, errors="replace").decode(enc, errors="replace")
+            print(safe)
     
     def _format_timestamp(self) -> str:
         """Format current timestamp for display.

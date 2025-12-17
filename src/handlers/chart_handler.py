@@ -199,11 +199,13 @@ class ChartOutputHandler:
             }
             plotly_spec["data"].append(trace)
         
-        # Apply custom styling
+        # Apply custom styling (default to Southwest Tech Ops palette where applicable)
         if spec.styling:
             if "colors" in spec.styling:
                 plotly_spec["layout"]["colorway"] = spec.styling["colors"]
             if "template" in spec.styling:
                 plotly_spec["layout"]["template"] = spec.styling["template"]
+        else:
+            plotly_spec["layout"]["colorway"] = ["#304CB2", "#C4122F", "#FFB612", "#111827", "#6B7280"]
         
         return plotly_spec

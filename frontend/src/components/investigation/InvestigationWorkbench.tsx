@@ -19,6 +19,7 @@ interface InvestigationWorkbenchProps {
     window?: 'weekly' | 'daily'
     point_t?: string
     max_iterations?: number
+    summary_level?: 'station' | 'region' | 'company'
   }
 }
 
@@ -200,7 +201,7 @@ export function InvestigationWorkbench({
                       <AgentResponse 
                         output={iteration.response} 
                         success={iteration.status !== 'failed'}
-                        duration_ms={0}
+                        duration_ms={iteration.duration_ms ?? 0}
                       />
                     </div>
                   )}

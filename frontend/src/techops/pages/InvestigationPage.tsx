@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { techOpsApi } from '../api'
-import { InvestigationRecord } from '../types'
+import { InvestigationRecord, TechOpsKPI } from '../types'
 import { InvestigationWorkbench } from '../../components/investigation/InvestigationWorkbench'
 import { ArrowLeft, Share2, FileDown, CheckCircle2 } from 'lucide-react'
 import ChartDisplay from '../../components/ChartDisplay'
@@ -16,6 +16,7 @@ export function InvestigationPage({
 }) {
   const [inv, setInv] = useState<InvestigationRecord | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [kpis, setKpis] = useState<TechOpsKPI[] | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -34,6 +35,23 @@ export function InvestigationPage({
       cancelled = true
     }
   }, [investigationId])
+
+  useEffect(() => {
+    let cancelled = false
+    techOpsApi
+      .getKPIs()
+      .then((ks) => {
+        if (cancelled) return
+        setKpis(ks)
+      })
+      .catch(() => {
+        if (cancelled) return
+        setKpis(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const title = inv ? `Investigation #${inv.investigation_id}` : 'Investigation'
 
@@ -76,7 +94,12 @@ export function InvestigationPage({
               <CheckCircle2 className="w-4 h-4" />
               Final Conclusions
             </button>
-            <button className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-[#0B2A55] hover:bg-[#082043] text-white font-semibold">
+            <button
+              type="button"
+              onClick={() => setTimeout(() => window.print(), 150)}
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-[#0B2A55] hover:bg-[#082043] text-white font-semibold no-print"
+              title="Export via browser print-to-PDF"
+            >
               <FileDown className="w-4 h-4" />
               Export PDF
             </button>
@@ -98,7 +121,7 @@ export function InvestigationPage({
               </div>
               <div>
                 <div className="text-xs text-slate-500 font-semibold">KPI</div>
-                <div className="text-sm font-bold text-slate-900">{inv.kpi_id.replaceAll('_', ' ')}</div>
+                <div className="text-sm font-bold text-slate-900">{inv.kpi_id.split('_').join(' ')}</div>
               </div>
               <div>
                 <div className="text-xs text-slate-500 font-semibold">WINDOW</div>
@@ -109,6 +132,23 @@ export function InvestigationPage({
                 <div className="text-sm font-bold text-slate-900">{inv.created_by.name}</div>
               </div>
             </div>
+
+            {kpis && kpis.length > 0 && (
+              <div className="mt-4 border-t border-slate-200 pt-4">
+                <div className="text-xs text-slate-500 font-semibold">AVAILABLE MEASURES</div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {kpis.map((k) => (
+                    <span
+                      key={k.id}
+                      className="px-2.5 py-1 rounded-full text-xs font-semibold border bg-slate-50 text-slate-700 border-slate-200"
+                      title={k.label}
+                    >
+                      {k.label}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -118,12 +158,12 @@ export function InvestigationPage({
               <div className="text-sm font-extrabold text-slate-900">DS‑STAR Diagnostics</div>
               <div className="text-xs text-slate-500 mt-1">Automated tests run for this investigation</div>
               <div className="mt-4 space-y-3">
-                {(inv.diagnostics || []).map((t, idx) => (
-                  <div key={idx} className="rounded-lg border border-slate-200 p-3 bg-slate-50">
+                {Array.from(new Map((inv.diagnostics || []).map((d) => [d.name, d])).values()).map((t) => (
+                  <div key={t.name} className="rounded-lg border border-slate-200 p-3 bg-slate-50">
                     <div className="flex items-center justify-between">
                       <div className="text-sm font-bold text-slate-900">{t.name}</div>
                       <span className="text-xs font-bold px-2 py-0.5 rounded-full border border-slate-200 bg-white text-slate-700">
-                        {String(t.status).replaceAll('_', ' ').toUpperCase()}
+                        {String(t.status).split('_').join(' ').toUpperCase()}
                       </span>
                     </div>
                     {typeof t.confidence === 'number' && (
@@ -141,6 +181,38 @@ export function InvestigationPage({
               {inv.telemetry ? (
                 <div className="p-4">
                   <ChartDisplay chart={inv.telemetry as any} />
+                  {Array.isArray((inv.telemetry as any)?.plotly_json?.layout?.meta?.phases) && (
+                    <div className="mt-4 border-t border-slate-200 pt-4">
+                      <div className="text-sm font-extrabold text-slate-900">SPC Stages (Wheeler Phases)</div>
+                      <div className="text-xs text-slate-500 mt-1">Limits recalc at detected shifts; latest phase drives current NPL.</div>
+                      <div className="mt-3 overflow-x-auto">
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr className="text-slate-500">
+                              <th className="text-left font-semibold py-1 pr-3">Phase</th>
+                              <th className="text-left font-semibold py-1 pr-3">Start</th>
+                              <th className="text-left font-semibold py-1 pr-3">End</th>
+                              <th className="text-right font-semibold py-1 pr-3">CL</th>
+                              <th className="text-right font-semibold py-1 pr-3">UCL</th>
+                              <th className="text-right font-semibold py-1">LCL</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {(inv.telemetry as any).plotly_json.layout.meta.phases.map((p: any) => (
+                              <tr key={String(p.phase)} className="border-t border-slate-100">
+                                <td className="py-1 pr-3 font-bold text-slate-900">{p.phase}</td>
+                                <td className="py-1 pr-3 text-slate-700">{String(p.start)}</td>
+                                <td className="py-1 pr-3 text-slate-700">{String(p.end)}</td>
+                                <td className="py-1 pr-3 text-right text-slate-700">{Number(p.cl).toFixed(3)}</td>
+                                <td className="py-1 pr-3 text-right text-slate-700">{Number(p.ucl).toFixed(3)}</td>
+                                <td className="py-1 text-right text-slate-700">{Number(p.lcl).toFixed(3)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="p-6 text-slate-600">No telemetry available.</div>
@@ -151,7 +223,7 @@ export function InvestigationPage({
 
         <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
           <InvestigationWorkbench
-            measureName={inv?.kpi_id.replaceAll('_', ' ') || 'Tech Ops KPI'}
+            measureName={inv?.kpi_id.split('_').join(' ') || 'Tech Ops KPI'}
             datasetName="techops_demo_metrics"
             initialQuery={inv?.prompt}
             autoRunInitialQuery={true}
@@ -161,6 +233,7 @@ export function InvestigationPage({
               station: inv?.station,
               window: inv?.window,
               point_t: inv?.selected_point_t || undefined,
+              summary_level: inv?.summary_level || 'station',
               max_iterations: 20,
             }}
           />
@@ -169,5 +242,3 @@ export function InvestigationPage({
     </div>
   )
 }
-
-

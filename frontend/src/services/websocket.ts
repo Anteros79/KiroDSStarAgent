@@ -9,6 +9,7 @@ export type StartAnalysisOptions = {
   window?: 'weekly' | 'daily'
   point_t?: string
   max_iterations?: number
+  summary_level?: 'station' | 'region' | 'company'
 }
 
 class WebSocketService {

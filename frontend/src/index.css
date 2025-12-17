@@ -219,6 +219,27 @@ body {
   }
 }
 
+@media print {
+  body {
+    background: #ffffff !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  main {
+    overflow: visible !important;
+  }
+
+  .chart-display,
+  .chart-container,
+  .js-plotly-plot {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
+
 @keyframes spin {
   from {
     transform: rotate(0deg);

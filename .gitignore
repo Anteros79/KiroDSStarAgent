@@ -46,6 +46,8 @@ htmlcov/
 # Output files
 output/
 *.log
+backend.dev.err
+backend.dev.log
 
 # OS files
 .DS_Store

@@ -1,6 +1,6 @@
 .chart-display {
-  background: #1e293b;
-  border: 1px solid #334155;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
   border-radius: 12px;
   overflow: hidden;
 }
@@ -10,21 +10,21 @@
   justify-content: space-between;
   align-items: center;
   padding: 1rem 1.25rem;
-  border-bottom: 1px solid #334155;
-  background: #0f172a;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
 }
 
 .chart-header h4 {
   font-size: 1rem;
   font-weight: 600;
-  color: #e2e8f0;
+  color: #0f172a;
   margin: 0;
 }
 
 .chart-type {
   font-size: 0.75rem;
   padding: 0.25rem 0.75rem;
-  background: #3b82f6;
+  background: #0b2a55;
   color: white;
   border-radius: 12px;
   text-transform: uppercase;

@@ -11,6 +11,9 @@ from typing import Dict, Any
 
 from src.models import SpecialistResponse, ToolCall
 from src.data.airline_data import query_airline_data
+from src.data.techops_metrics import get_techops_store
+from src.techops.investigation_tests import TechOpsContext, format_test_result, run_test
+from src.llm.ollama_client import chat as ollama_chat
 
 logger = logging.getLogger(__name__)
 
@@ -93,24 +96,128 @@ def data_analyst(query: str, context: Dict[str, Any] = None) -> str:
         # In a real implementation, this would use the BedrockModel
         # For now, we'll simulate the agent's behavior
         
-        # Step 1: Analyze the query to understand what data analysis is needed
-        analysis_plan = _plan_analysis(query)
-        
-        # Step 2: Execute the data query using the airline data tool
-        query_start = time.time()
-        data_result = query_airline_data(query)
-        query_duration = int((time.time() - query_start) * 1000)
-        
-        # Record the tool call
-        tool_calls.append(ToolCall(
-            tool_name="query_airline_data",
-            inputs={"query": query},
-            output=data_result,
-            duration_ms=query_duration
-        ))
-        
-        # Step 3: Formulate the response with analysis and insights
-        response = _formulate_response(query, analysis_plan, data_result, context)
+        ctx = context or {}
+
+        # If Tech Ops context is present, run deterministic KPI spike tests instead of the airline dataset query.
+        if ctx.get("kpi_id") and ctx.get("station") and ctx.get("window"):
+            store = get_techops_store()
+            test_name = str(ctx.get("test_name") or "signal_characterization")
+            executed = set(ctx.get("executed_tests") or [])
+            evidence_log = str(ctx.get("evidence_log") or "").strip()
+            precomputed = str(ctx.get("techops_test_output") or "").strip()
+
+            if test_name in executed:
+                data_result = f"Skipping duplicate test: {test_name}"
+            elif precomputed:
+                data_result = precomputed
+                tool_calls.append(
+                    ToolCall(
+                        tool_name="techops_run_test",
+                        inputs={
+                            "test_name": test_name,
+                            "kpi_id": str(ctx.get("kpi_id")),
+                            "station": str(ctx.get("station")),
+                            "window": str(ctx.get("window")),
+                            "point_t": str(ctx.get("point_t")) if ctx.get("point_t") else None,
+                        },
+                        output={"precomputed": True, "formatted": data_result},
+                        duration_ms=0,
+                    )
+                )
+            else:
+                tctx = TechOpsContext(
+                    kpi_id=str(ctx["kpi_id"]),
+                    station=str(ctx["station"]),
+                    window=str(ctx["window"]),
+                    point_t=str(ctx.get("point_t")) if ctx.get("point_t") else None,
+                )
+                query_start = time.time()
+                result = run_test(store=store, ctx=tctx, test_name=test_name)
+                query_duration = int((time.time() - query_start) * 1000)
+
+                tool_calls.append(
+                    ToolCall(
+                        tool_name="techops_run_test",
+                        inputs={"test_name": test_name, "kpi_id": tctx.kpi_id, "station": tctx.station, "window": tctx.window, "point_t": tctx.point_t},
+                        output=result,
+                        duration_ms=query_duration,
+                    )
+                )
+                data_result = format_test_result(result)
+
+            analysis_plan = f"Run Tech Ops diagnostic test: {test_name}"
+
+            # Use local Ollama model to interpret the test output (proves DS-STAR runs locally).
+            model_provider = str(ctx.get("model_provider") or "ollama")
+            model_id = str(ctx.get("model_id") or "")
+            ollama_host = str(ctx.get("ollama_host") or "http://127.0.0.1:11434")
+
+            model_note = f"{model_provider}:{model_id}" if model_id else model_provider
+            llm_block = ""
+            if model_provider == "ollama" and model_id and "Skipping duplicate test" not in data_result:
+                prompt = (
+                    "You are the DS-STAR Data Analyst agent.\n"
+                    "You are investigating: What caused this signal spike?\n\n"
+                    f"CURRENT TEST: {test_name}\n\n"
+                    "TEST OUTPUT (authoritative):\n"
+                    f"{data_result}\n\n"
+                    + (f"PRIOR TEST OUTPUTS:\n{evidence_log}\n\n" if evidence_log else "")
+                    + "Task:\n"
+                    "- Explain what this test suggests about the cause of the signal spike (1-4 bullets)\n"
+                    "- State whether we have enough to answer the user now.\n"
+                    "- Finish with a single line exactly like: SATISFIED: true|false\n\n"
+                    "Do not include internal reasoning.\n"
+                )
+                llm_text, llm_ms, _raw = ollama_chat(
+                    host=ollama_host,
+                    model=model_id,
+                    prompt=prompt,
+                    num_predict=1024,
+                    temperature=0.2,
+                    timeout_s=240,
+                )
+                if llm_text:
+                    llm_block = f"\n\n---\nMODEL ({model_note})\nLATENCY_MS: {llm_ms}\n{llm_text}\n"
+                else:
+                    err = ""
+                    if isinstance(_raw, dict) and _raw.get("error"):
+                        err = f"ERROR: {_raw.get('error')}\n"
+                    llm_block = (
+                        f"\n\n---\nMODEL ({model_note})\nLATENCY_MS: {llm_ms}\n"
+                        f"{err}"
+                        "Model returned empty output.\n"
+                        "If you're running locally, verify Ollama is up and the model is pulled:\n"
+                        f"- `ollama serve`\n- `ollama pull {model_id}`\n"
+                        "SATISFIED: false\n"
+                    )
+            elif model_provider != "ollama":
+                llm_block = f"\n\n---\nMODEL ({model_note})\nNOTE: Only Ollama is supported for this Tech Ops demo path.\nSATISFIED: false\n"
+            elif not model_id:
+                llm_block = f"\n\n---\nMODEL ({model_note})\nERROR: No model_id configured.\nSATISFIED: false\n"
+
+            response = _formulate_response(query, analysis_plan, data_result, context) + llm_block
+
+        else:
+            # Step 1: Analyze the query to understand what data analysis is needed
+            analysis_plan = _plan_analysis(query)
+
+            # Step 2: Execute the data query using the airline data tool
+            query_start = time.time()
+            data_result = query_airline_data(query)
+            query_duration = int((time.time() - query_start) * 1000)
+
+            # Record the tool call
+            tool_calls.append(
+                ToolCall(
+                    tool_name="query_airline_data",
+                    inputs={"query": query},
+                    output=data_result,
+                    duration_ms=query_duration,
+                )
+            )
+
+            # Step 3: Formulate the response with analysis and insights
+            response = _formulate_response(query, analysis_plan, data_result, context)
         
         # Calculate total execution time
         execution_time = int((time.time() - start_time) * 1000)

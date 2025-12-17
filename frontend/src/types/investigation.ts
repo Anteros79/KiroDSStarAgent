@@ -31,6 +31,7 @@ export interface StepIteration {
   description: string
   generatedCode: string
   response: string
+  duration_ms?: number
   visualization?: ChartData
   verification: VerificationResult
   status: 'pending' | 'generating' | 'executing' | 'verifying' | 'verified' | 'failed'

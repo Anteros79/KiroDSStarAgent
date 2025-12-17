@@ -11,6 +11,11 @@ import yaml
 
 logger = logging.getLogger(__name__)
 
+# Default local model tag for Ollama.
+# Keep this in sync with `.env.example` and `README.md`.
+DEFAULT_OLLAMA_MODEL_ID = "qwen3:30b"
+DEFAULT_BEDROCK_MODEL_ID = "us.amazon.nova-lite-v1:0"
+
 
 @dataclass
 class Config:
@@ -19,7 +24,7 @@ class Config:
     Attributes:
         model_provider: Model provider ("ollama" or "bedrock")
         model_id: Model identifier (e.g., "gemma3:27b" for Ollama, "us.amazon.nova-lite-v1:0" for Bedrock)
-        ollama_host: Ollama server URL (default: http://localhost:11434)
+        ollama_host: Ollama server URL (default: http://127.0.0.1:11434)
         region: AWS region for Bedrock API
         verbose: Enable detailed logging and investigation stream output
         max_tokens: Maximum tokens for model responses
@@ -31,8 +36,8 @@ class Config:
     """
     
     model_provider: str = "ollama"  # "ollama" or "bedrock"
-    model_id: str = "gemma3:27b"  # Default to local Ollama Gemma 3 27B
-    ollama_host: str = "http://localhost:11434"
+    model_id: str = DEFAULT_OLLAMA_MODEL_ID  # Default to local Ollama model tag
+    ollama_host: str = "http://127.0.0.1:11434"
     region: str = "us-west-2"
     verbose: bool = False
     max_tokens: int = 4096
@@ -49,7 +54,7 @@ class Config:
         Environment variables:
             DS_STAR_MODEL_PROVIDER: Model provider ("ollama" or "bedrock", default: ollama)
             DS_STAR_MODEL_ID: Model identifier (default: gemma3:27b for ollama)
-            DS_STAR_OLLAMA_HOST: Ollama server URL (default: http://localhost:11434)
+            DS_STAR_OLLAMA_HOST: Ollama server URL (default: http://127.0.0.1:11434)
             DS_STAR_REGION or AWS_REGION: AWS region (default: us-west-2)
             DS_STAR_VERBOSE: Enable verbose mode (default: False)
             DS_STAR_MAX_TOKENS: Maximum tokens (default: 4096)
@@ -67,6 +72,10 @@ class Config:
         # Load model provider
         if model_provider := os.getenv("DS_STAR_MODEL_PROVIDER"):
             config.model_provider = model_provider.lower()
+
+        # Provider-specific default model if the user didn't explicitly set one.
+        if config.model_provider == "bedrock" and not os.getenv("DS_STAR_MODEL_ID"):
+            config.model_id = DEFAULT_BEDROCK_MODEL_ID
         
         # Load each field from environment with validation
         if model_id := os.getenv("DS_STAR_MODEL_ID"):
@@ -161,6 +170,11 @@ class Config:
             # Update fields from file data with validation
             if "model_provider" in data:
                 config.model_provider = str(data["model_provider"]).lower()
+
+            # If the config switches to Bedrock but doesn't specify a model_id,
+            # use the Bedrock default rather than an Ollama model tag.
+            if config.model_provider == "bedrock" and "model_id" not in data:
+                config.model_id = DEFAULT_BEDROCK_MODEL_ID
             
             if "model_id" in data:
                 config.model_id = str(data["model_id"])
@@ -230,6 +244,19 @@ class Config:
         Returns:
             Config instance with merged values
         """
+        # Best-effort load `.env` (if present) so local dev config works without
+        # manually exporting environment variables.
+        try:
+            from dotenv import load_dotenv  # type: ignore
+
+            env_path = Path.cwd() / ".env"
+            if env_path.exists():
+                load_dotenv(dotenv_path=env_path, override=False)
+        except Exception:
+            # ImportError (python-dotenv missing) or any dotenv parsing issues
+            # should not prevent the app from starting with defaults.
+            pass
+
         if config_file:
             try:
                 config = cls.from_file(config_file)
@@ -268,6 +295,10 @@ class Config:
             config.retry_attempts = env_config.retry_attempts
         if env_config.retry_delay_base != default_config.retry_delay_base:
             config.retry_delay_base = env_config.retry_delay_base
+
+        # Provider-specific default model if provider changed but model_id wasn't set.
+        if config.model_provider == "bedrock" and config.model_id == DEFAULT_OLLAMA_MODEL_ID:
+            config.model_id = DEFAULT_BEDROCK_MODEL_ID
         
         return config
     

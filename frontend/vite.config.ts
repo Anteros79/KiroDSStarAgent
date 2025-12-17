@@ -8,13 +8,14 @@ export default defineConfig({
     // Allow `start_application.bat` (or devs) to choose ports dynamically.
     // Defaults preserve the current behavior if env vars are not provided.
     port: Number.parseInt(process.env.VITE_DEV_PORT ?? '3000', 10),
+    host: '127.0.0.1',
     proxy: {
       '/api': {
-        target: `http://localhost:${process.env.VITE_BACKEND_PORT ?? '8000'}`,
+        target: `http://127.0.0.1:${process.env.VITE_BACKEND_PORT ?? '8000'}`,
         changeOrigin: true,
       },
       '/ws': {
-        target: `ws://localhost:${process.env.VITE_BACKEND_PORT ?? '8000'}`,
+        target: `ws://127.0.0.1:${process.env.VITE_BACKEND_PORT ?? '8000'}`,
         ws: true,
       },
     },

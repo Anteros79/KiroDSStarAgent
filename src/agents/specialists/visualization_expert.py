@@ -690,7 +690,8 @@ def _create_chart_specification(query: str, viz_type: str, matplotlib_code: str)
         x_axis=x_axis,
         y_axis=y_axis,
         styling={
-            "colors": ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd"],
+            # Southwest Tech Ops palette (consistent with dashboard)
+            "colors": ["#304CB2", "#C4122F", "#FFB612", "#111827", "#6B7280"],
             "template": "plotly_white"
         },
         matplotlib_code=matplotlib_code

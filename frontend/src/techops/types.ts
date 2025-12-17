@@ -23,6 +23,10 @@ export interface TechOpsMetricPoint {
   yoy_value?: number | null
   yoy_delta?: number | null
   signal_state: SignalState
+  cl?: number | null
+  ucl?: number | null
+  lcl?: number | null
+  phase_number?: number | null
 }
 
 export interface TechOpsKPISeries {
@@ -32,6 +36,11 @@ export interface TechOpsKPISeries {
   past_value: number
   past_delta: number
   signal_state: SignalState
+  npl_cl: number
+  npl_ucl: number
+  npl_lcl: number
+  npl_sigma: number
+  npl_mr_bar: number
 }
 
 export interface TechOpsDashboardResponse {
@@ -48,6 +57,8 @@ export interface ActiveSignalsResponse {
     station: string
     status: SignalState
     detected_at: string
+    window?: 'weekly' | 'daily'
+    latest_point_t?: string | null
     latest_value: number
   }>
 }
@@ -57,6 +68,7 @@ export interface CreateInvestigationRequest {
   station: string
   window: 'weekly' | 'daily'
   point_t?: string
+  summary_level?: 'station' | 'region' | 'company'
 }
 
 export interface CreateInvestigationResponse {
@@ -70,6 +82,7 @@ export interface InvestigationRecord {
   kpi_id: string
   station: string
   window: 'weekly' | 'daily'
+  summary_level?: 'station' | 'region' | 'company'
   created_by: DemoIdentity
   created_at: string
   status: string
@@ -111,5 +124,3 @@ export type FinalizeInvestigationRequest = {
   final_notes?: string | null
   evidence: EvidenceItem[]
 }
-
-
