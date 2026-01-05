@@ -68,6 +68,82 @@ def _compact_test_evidence(text: str) -> str:
     return "\n".join(out[:120]).strip()
 
 
+def _calculate_test_confidence(test_name: str, result: Dict[str, Any]) -> float:
+    """Calculate confidence level for a diagnostic test based on its results."""
+    base_confidence = 0.70
+    
+    if test_name == "signal_characterization":
+        # High confidence if we found a clear Rule #1 violation or stage change
+        finding = result.get("finding", "")
+        if "beyond NPL" in finding or "Rule #1" in finding:
+            base_confidence = 0.92
+        elif result.get("stage_change"):
+            base_confidence = 0.88
+        elif result.get("mr_signal"):
+            base_confidence = 0.85
+        else:
+            base_confidence = 0.75
+        # Boost if we have a known root cause
+        if result.get("known_demo_root_cause"):
+            base_confidence = min(0.98, base_confidence + 0.05)
+    
+    elif test_name == "yoy_seasonality":
+        # Confidence based on whether YoY data is available and significant
+        yoy_delta = result.get("yoy_delta")
+        if yoy_delta is not None:
+            # Larger deltas = more confident the change is meaningful
+            if abs(yoy_delta) > 0.5:
+                base_confidence = 0.85
+            elif abs(yoy_delta) > 0.2:
+                base_confidence = 0.78
+            else:
+                base_confidence = 0.65
+        else:
+            base_confidence = 0.50  # No YoY data available
+    
+    elif test_name == "cross_station":
+        # High confidence if we can clearly isolate the issue
+        peer_values = result.get("peer_values", {})
+        selected_value = result.get("selected_value")
+        peer_mean = result.get("peer_mean")
+        
+        if peer_mean is not None and selected_value is not None:
+            # If selected station differs significantly from peers, high confidence
+            diff = abs(selected_value - peer_mean)
+            if diff > 0.5:
+                base_confidence = 0.95  # Clear isolation
+            elif diff > 0.2:
+                base_confidence = 0.85
+            else:
+                base_confidence = 0.70  # Similar to peers (systemic)
+        else:
+            base_confidence = 0.60
+    
+    elif test_name == "pre_post_shift":
+        # Confidence based on magnitude of shift
+        delta = result.get("delta")
+        if delta is not None:
+            if abs(delta) > 0.5:
+                base_confidence = 0.90
+            elif abs(delta) > 0.2:
+                base_confidence = 0.82
+            else:
+                base_confidence = 0.68
+        else:
+            base_confidence = 0.55
+    
+    elif test_name == "final_summary":
+        # Summary confidence is average of other tests
+        if result.get("known_demo_root_cause"):
+            base_confidence = 0.92
+        elif "Rule #1" in result.get("finding", ""):
+            base_confidence = 0.88
+        else:
+            base_confidence = 0.75
+    
+    return round(base_confidence, 2)
+
+
 def generate_chart_from_response(response_text: str, query: str) -> Optional[Dict[str, Any]]:
     """Generate a Plotly chart from the response text by parsing data patterns."""
     import re
@@ -1242,26 +1318,52 @@ async def techops_create_investigation(req: CreateInvestigationRequest):
         point_t=selected_t,
         summary_level=summary_level,
     )
-    diagnostics = [
-        {
-            "name": "MX driver check",
-            "status": "in_progress" if prompt_mode == "cause" else "completed",
-            "confidence": 0.68 if prompt_mode == "cause" else 0.54,
-            "detail": "Correlate KPI deviation with top fault/finding categories and recent work orders.",
-        },
-        {
-            "name": "YoY / seasonality test",
-            "status": "completed",
-            "confidence": 0.72,
-            "detail": "Compare current window to prior-year baseline for the same weeks/days.",
-        },
-        {
-            "name": "Station vs fleet comparison",
-            "status": "completed",
-            "confidence": 0.64,
-            "detail": "Benchmark station series vs fleet average to isolate local vs systemic drivers.",
-        },
-    ]
+    diagnostics = []
+    
+    # Run actual diagnostic tests and capture results with confidence
+    ctx = TechOpsContext(
+        kpi_id=req.kpi_id,
+        station=req.station,
+        window=req.window,
+        point_t=selected_t,
+        summary_level=summary_level,
+    )
+    test_plan = build_test_plan(ctx)
+    store = get_techops_store()
+    
+    for test_name in test_plan:
+        try:
+            result = run_test(store=store, ctx=ctx, test_name=test_name)
+            # Calculate confidence based on test results
+            confidence = _calculate_test_confidence(test_name, result)
+            diagnostics.append({
+                "name": test_name,
+                "status": "completed",
+                "confidence": confidence,
+                "detail": result.get("finding", ""),
+                "finding": result.get("finding", ""),
+                "selected_t": result.get("selected_t"),
+                "selected_value": result.get("selected_value"),
+                "ucl": result.get("ucl"),
+                "lcl": result.get("lcl"),
+                "cl": result.get("cl"),
+                "yoy_delta": result.get("yoy_delta"),
+                "peer_mean": result.get("peer_mean"),
+                "pre_mean": result.get("pre_mean"),
+                "post_mean": result.get("post_mean"),
+                "delta": result.get("delta"),
+                "known_demo_root_cause": result.get("known_demo_root_cause"),
+                "stage_change": result.get("stage_change"),
+                "mr_signal": result.get("mr_signal"),
+            })
+        except Exception as e:
+            diagnostics.append({
+                "name": test_name,
+                "status": "failed",
+                "confidence": 0.0,
+                "detail": f"Test failed: {str(e)}",
+            })
+    
     # Ensure diagnostics list doesn't contain duplicates by name
     seen = set()
     diagnostics = [d for d in diagnostics if not (d["name"] in seen or seen.add(d["name"]))]

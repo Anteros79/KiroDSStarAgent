@@ -2,6 +2,15 @@
 
 This document contains example queries for demonstrating the DS-Star multi-agent system with airline operations data. Each query shows the expected routing behavior and specialist involvement.
 
+## System Overview
+
+DS-STAR uses a star topology with an Orchestrator routing queries to 5 specialist agents:
+- **Data Analyst** - Data exploration, statistical analysis, KPI calculations
+- **ML Engineer** - Machine learning recommendations, model selection, predictive analytics
+- **Visualization Expert** - Data visualization, chart recommendations, visual analytics
+- **Statistics Expert** - Statistical process control, Wheeler XmR analysis, hypothesis testing
+- **Domain Expert** - Airline operations domain knowledge, industry context, best practices
+
 ## Data Analyst Queries
 
 These queries focus on data exploration, statistical analysis, and KPI calculations.
@@ -124,6 +133,80 @@ These queries focus on data visualization, chart recommendations, and visual ana
 
 ---
 
+## Statistics Expert Queries
+
+These queries focus on statistical process control, Wheeler XmR analysis, and hypothesis testing.
+
+### Query 16: Process Control Analysis
+**Query:** "Analyze the OTP rate using Wheeler XmR charts. Are there any signals indicating special cause variation?"
+
+**Expected Routing:** Statistics Expert Agent
+
+**Reasoning:** This requires statistical process control expertise. The Statistics Expert will apply Wheeler's XmR methodology to identify signals.
+
+**Expected Output:** XmR chart analysis with natural process limits, signal identification (Rule #1 violations, stage changes), and interpretation.
+
+---
+
+### Query 17: Trend Detection
+**Query:** "Has there been a statistically significant shift in delay patterns over the past 8 weeks?"
+
+**Expected Routing:** Statistics Expert Agent
+
+**Reasoning:** Requires hypothesis testing and trend analysis. The Statistics Expert will apply appropriate statistical tests.
+
+**Expected Output:** Statistical analysis with confidence levels, pre/post comparison, and determination of whether the shift is significant.
+
+---
+
+### Query 18: Anomaly Detection
+**Query:** "Identify any statistical anomalies in the turnaround time data. What's the baseline and what points are outliers?"
+
+**Expected Routing:** Statistics Expert Agent
+
+**Reasoning:** Anomaly detection using statistical methods. The expert will calculate control limits and identify outliers.
+
+**Expected Output:** Natural process limits, identified anomalies with confidence scores, and recommendations.
+
+---
+
+## Domain Expert Queries
+
+These queries focus on airline operations domain knowledge and industry context.
+
+### Query 19: Industry Benchmarking
+**Query:** "How does our OTP performance compare to industry standards? What's considered good performance?"
+
+**Expected Routing:** Domain Expert Agent
+
+**Reasoning:** Requires airline industry domain knowledge. The Domain Expert understands industry benchmarks and standards.
+
+**Expected Output:** Industry benchmark comparison, context for performance metrics, and recommendations based on industry best practices.
+
+---
+
+### Query 20: Root Cause Context
+**Query:** "We're seeing increased mechanical delays. What are the typical root causes in airline operations and what should we investigate?"
+
+**Expected Routing:** Domain Expert Agent
+
+**Reasoning:** Requires operational domain expertise. The Domain Expert understands maintenance operations and common failure modes.
+
+**Expected Output:** Domain-specific root cause analysis framework, investigation priorities, and operational context.
+
+---
+
+### Query 21: Operational Impact Assessment
+**Query:** "If we improve turnaround time by 5 minutes, what's the expected impact on our operations?"
+
+**Expected Routing:** Domain Expert Agent
+
+**Reasoning:** Requires understanding of airline operations cascading effects. The Domain Expert can contextualize operational changes.
+
+**Expected Output:** Impact analysis with operational context, downstream effects, and industry-relevant considerations.
+
+---
+
 ## Multi-Domain Queries
 
 These queries span multiple specialist domains and require coordination by the Orchestrator.
@@ -210,6 +293,17 @@ These queries span multiple specialist domains and require coordination by the O
 - Display the dual output format (matplotlib + Plotly JSON)
 - Show the chart specification structure for UI integration
 - Demonstrate the styling and customization options
+
+### For Statistics Expert Queries:
+- Highlight Wheeler XmR methodology and natural process limits
+- Show confidence scores for signal detection
+- Explain Rule #1 violations and stage changes
+- Demonstrate how statistical rigor supports decision-making
+
+### For Domain Expert Queries:
+- Emphasize industry context and benchmarking
+- Show how domain knowledge enriches analysis
+- Highlight operational recommendations and best practices
 
 ### For Multi-Domain Queries:
 - Emphasize the star topology in action

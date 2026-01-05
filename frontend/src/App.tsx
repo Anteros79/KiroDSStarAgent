@@ -9,6 +9,7 @@ import { TechOpsShell } from './techops/layout/TechOpsShell'
 import { DashboardPage } from './techops/pages/DashboardPage'
 import { InvestigationPage } from './techops/pages/InvestigationPage'
 import { FinalConclusionsPage } from './techops/pages/FinalConclusionsPage'
+import { AdminReviewPage } from './techops/pages/AdminReviewPage'
 
 function App() {
   const [status, setStatus] = useState<SystemStatus | null>(null)
@@ -18,7 +19,7 @@ function App() {
   const { isConnected } = useWebSocket()
 
   const [identity, setIdentity] = useState<DemoIdentity | null>(null)
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'investigation' | 'fleet' | 'reports'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'investigation' | 'admin' | 'fleet' | 'reports'>('dashboard')
   const [activeInvestigationId, setActiveInvestigationId] = useState<string | null>(null)
   const [investigationView, setInvestigationView] = useState<'workbench' | 'final'>('workbench')
   const [summaryLevel, setSummaryLevel] = useState<'station' | 'region' | 'company'>('station')
@@ -156,6 +157,16 @@ function App() {
             Select a KPI on the dashboard to start a DS‑STAR investigation.
           </div>
         </div>
+      )}
+
+      {activeTab === 'admin' && (
+        <AdminReviewPage
+          onSelectInvestigation={(investigation_id) => {
+            setActiveInvestigationId(investigation_id)
+            setInvestigationView('workbench')
+            setActiveTab('investigation')
+          }}
+        />
       )}
 
       {activeTab === 'fleet' && (

@@ -13,7 +13,7 @@ from src.models import SpecialistResponse, ToolCall
 from src.data.airline_data import query_airline_data
 from src.data.techops_metrics import get_techops_store
 from src.techops.investigation_tests import TechOpsContext, format_test_result, run_test
-from src.llm.ollama_client import chat as ollama_chat
+from src.llm.generic_client import chat as llm_chat
 
 logger = logging.getLogger(__name__)
 
@@ -147,14 +147,16 @@ def data_analyst(query: str, context: Dict[str, Any] = None) -> str:
 
             analysis_plan = f"Run Tech Ops diagnostic test: {test_name}"
 
-            # Use local Ollama model to interpret the test output (proves DS-STAR runs locally).
-            model_provider = str(ctx.get("model_provider") or "ollama")
+            # Use configured LLM provider to interpret the test output
+            model_provider = str(ctx.get("model_provider") or "lemonade")
             model_id = str(ctx.get("model_id") or "")
             ollama_host = str(ctx.get("ollama_host") or "http://127.0.0.1:11434")
+            lemonade_base_url = str(ctx.get("lemonade_base_url") or "http://localhost:8000/api/v1")
 
             model_note = f"{model_provider}:{model_id}" if model_id else model_provider
             llm_block = ""
-            if model_provider == "ollama" and model_id and "Skipping duplicate test" not in data_result:
+            
+            if model_id and "Skipping duplicate test" not in data_result:
                 prompt = (
                     "You are the DS-STAR Data Analyst agent.\n"
                     "You are investigating: What caused this signal spike?\n\n"
@@ -168,13 +170,15 @@ def data_analyst(query: str, context: Dict[str, Any] = None) -> str:
                     "- Finish with a single line exactly like: SATISFIED: true|false\n\n"
                     "Do not include internal reasoning.\n"
                 )
-                llm_text, llm_ms, _raw = ollama_chat(
-                    host=ollama_host,
+                llm_text, llm_ms, _raw = llm_chat(
+                    provider=model_provider,
                     model=model_id,
                     prompt=prompt,
-                    num_predict=1024,
+                    max_tokens=1024,
                     temperature=0.2,
                     timeout_s=240,
+                    ollama_host=ollama_host,
+                    lemonade_base_url=lemonade_base_url,
                 )
                 if llm_text:
                     llm_block = f"\n\n---\nMODEL ({model_note})\nLATENCY_MS: {llm_ms}\n{llm_text}\n"
@@ -186,12 +190,9 @@ def data_analyst(query: str, context: Dict[str, Any] = None) -> str:
                         f"\n\n---\nMODEL ({model_note})\nLATENCY_MS: {llm_ms}\n"
                         f"{err}"
                         "Model returned empty output.\n"
-                        "If you're running locally, verify Ollama is up and the model is pulled:\n"
-                        f"- `ollama serve`\n- `ollama pull {model_id}`\n"
+                        f"Provider: {model_provider}, Model: {model_id}\n"
                         "SATISFIED: false\n"
                     )
-            elif model_provider != "ollama":
-                llm_block = f"\n\n---\nMODEL ({model_note})\nNOTE: Only Ollama is supported for this Tech Ops demo path.\nSATISFIED: false\n"
             elif not model_id:
                 llm_block = f"\n\n---\nMODEL ({model_note})\nERROR: No model_id configured.\nSATISFIED: false\n"
 

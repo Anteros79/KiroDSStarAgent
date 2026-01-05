@@ -56,7 +56,6 @@ function investigationReducer(state: Investigation | null, action: ExtendedInves
 
     case 'ADD_STEP_WITH_ID': {
       if (!state) return state
-      if (state.steps.some(s => s.id === action.stepId)) return state
       const newStep: InvestigationStep = {
         id: action.stepId,
         stepNumber: state.steps.length + 1,
@@ -107,7 +106,6 @@ function investigationReducer(state: Investigation | null, action: ExtendedInves
       if (stepIndex === -1) return state
 
       const step = state.steps[stepIndex]
-      if (step.iterations.some(i => i.id === action.iterationId)) return state
       const newIteration: StepIteration = {
         id: action.iterationId,
         iterationNumber: action.iterationNumber ?? (step.iterations.length + 1),
@@ -269,7 +267,6 @@ export function useInvestigation() {
             iterationId: event.data.iteration_id,
             updates: {
               response: event.data.output?.output || '',
-              duration_ms: event.data.output?.duration_ms ?? 0,
               status: 'verifying',
             },
           })
@@ -294,13 +291,10 @@ export function useInvestigation() {
               status: event.data.result.passed ? 'verified' : 'failed',
             },
           })
-          break
-
-        case 'step_completed':
           setIsProcessing(false)
           break
 
-        case 'analysis_completed':
+        case 'step_completed':
           setIsProcessing(false)
           break
 

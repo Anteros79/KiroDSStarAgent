@@ -1,168 +1,202 @@
-# DS-Star Demo Materials
+# DS-STAR Demo Materials
 
-This directory contains materials for demonstrating the DS-Star multi-agent system.
+This directory contains materials for demonstrating the DS-STAR multi-agent system.
 
-## Files
+**Last Updated:** January 4, 2026
 
-### `sample_queries.md`
-A comprehensive collection of example queries organized by specialist type:
-- **Data Analyst queries**: Statistical analysis, KPI calculations, data exploration
-- **ML Engineer queries**: Model recommendations, predictive analytics
-- **Visualization Expert queries**: Chart creation, visualization guidance
-- **Multi-domain queries**: Complex queries requiring multiple specialists
-- **Edge cases**: Ambiguous queries and conversational follow-ups
+## Contents
 
-Each query includes:
-- The query text
-- Expected routing behavior
-- Reasoning explanation
-- Expected output description
+| File | Description |
+|------|-------------|
+| `sample_queries.md` | Example queries organized by specialist type |
+| `demo_scenarios.md` | Pre-built demo scenarios with expected outputs |
+| `run_demo.py` | Automated demo script |
 
-Use this file as a reference when preparing demos or testing the system.
+## Quick Start
 
-### `run_demo.py`
-An automated demo script that showcases the DS-Star system's capabilities through a series of pre-configured scenarios.
+### Prerequisites
 
-#### Features:
-- **6 demo scenarios** covering single-domain and multi-domain queries
-- **Interactive mode** with pauses for presenter explanation
-- **Auto-advance mode** for unattended demonstrations
-- **Verbose mode** to show detailed investigation streams
-- **Configurable** via command-line arguments
+DS-STAR supports 5 model providers. Configure your preferred provider in `.env`:
+- **Lemonade** (default) - Local execution on AMD Ryzen AI
+- **Anthropic** - Claude models via API
+- **OpenAI** - GPT-4 models via API
+- **Ollama** - Local execution on any hardware
+- **AWS Bedrock** - Enterprise AWS deployments
 
-#### Usage:
+See `PROVIDER_QUICK_REFERENCE.md` for setup details.
 
-**Interactive Demo (recommended for presentations):**
+### Interactive Demo (Recommended)
+
 ```bash
 python demo/run_demo.py
 ```
-This mode pauses between scenarios, allowing the presenter to explain what's happening.
 
-**Automated Demo:**
+Pauses between scenarios for presenter explanation.
+
+### Automated Demo
+
 ```bash
 python demo/run_demo.py --auto
 ```
-Automatically advances through all scenarios with timed pauses.
 
-**Verbose Mode:**
+### Verbose Mode
+
 ```bash
 python demo/run_demo.py --verbose
 ```
-Shows detailed investigation stream output including all reasoning steps and tool calls.
 
-**Custom Configuration:**
-```bash
-# Use a different model
-python demo/run_demo.py --model us.amazon.nova-pro-v1:0
-
-# Use a different region
-python demo/run_demo.py --region us-east-1
-
-# Load from config file
-python demo/run_demo.py --config config.yaml
-```
-
-**Combined Options:**
-```bash
-python demo/run_demo.py --verbose --auto --model us.amazon.nova-pro-v1:0
-```
+Shows detailed investigation stream output.
 
 ## Demo Scenarios
 
-The automated demo includes the following scenarios:
+### 1. Data Analysis: On-Time Performance
+- **Routing**: Data Analyst only
+- **Demonstrates**: Statistical analysis, KPI calculations
+- **Query**: "What is the average delay by airline?"
 
-1. **Data Analysis: On-Time Performance**
-   - Single-domain routing to Data Analyst
-   - Demonstrates statistical analysis and KPI calculations
+### 2. Machine Learning: Delay Prediction
+- **Routing**: ML Engineer (+ Data Analyst for context)
+- **Demonstrates**: Model recommendations, code generation
+- **Query**: "How can I predict flight delays?"
 
-2. **Machine Learning: Delay Prediction**
-   - Single-domain routing to ML Engineer
-   - Shows model recommendations and code generation
+### 3. Visualization: Delay Distribution
+- **Routing**: Data Analyst → Visualization Expert
+- **Demonstrates**: Chart creation, Plotly JSON output
+- **Query**: "Create a bar chart of delays by airline"
 
-3. **Visualization: Delay Distribution**
-   - Single-domain routing to Visualization Expert
-   - Demonstrates chart creation and specification output
+### 4. Multi-Domain: Comprehensive Analysis
+- **Routing**: Data Analyst → ML Engineer → Visualization Expert
+- **Demonstrates**: Star topology, response synthesis
+- **Query**: "Analyze delays, recommend a prediction model, and visualize the results"
 
-4. **Multi-Domain: Comprehensive Delay Analysis**
-   - Routes to all three specialists sequentially
-   - Showcases the star topology architecture
-   - Demonstrates response synthesis
+### 5. Tech Ops Investigation
+- **Routing**: Orchestrator → Diagnostic Tests → LLM Interpretation
+- **Demonstrates**: Wheeler XmR, signal detection, root cause analysis
+- **Scenario**: PHX Parts Shortage
 
-5. **Multi-Domain: Load Factor Optimization**
-   - Another multi-specialist coordination example
-   - Shows context passing between agents
+## Tech Ops Demo Scenarios
 
-6. **Investigation Stream: Verbose Mode**
-   - Highlights the investigation stream capabilities
-   - Shows real-time reasoning and tool invocations
+Pre-built scenarios in `src/data/demo_scenarios.py`:
 
-## Prerequisites
+### PHX Parts Shortage
+- **Station**: Phoenix (PHX)
+- **KPI**: OTP MX Rate
+- **Root Cause**: Parts availability issue from supplier delay
+- **Expected Findings**:
+  - Signal characterization: Rule #1 violation
+  - Cross-station: PHX isolated from peers
+  - Pre/post shift: Sustained degradation
 
-Before running the demo, ensure you have:
+### DAL Weather Cascade
+- **Station**: Dallas (DAL)
+- **KPI**: EMO MX Rate
+- **Root Cause**: Weather event triggering maintenance cascade
+- **Expected Findings**:
+  - Signal characterization: Stage change detected
+  - YoY seasonality: Unusual for season
+  - Cross-station: DAL-specific impact
 
-1. **AWS Credentials configured** for Amazon Bedrock access
-2. **Required packages installed**: `pip install -r requirements.txt`
-3. **Sample data generated**: Run `python src/data/generate_sample_data.py` if not already done
-4. **Environment variables set** (optional):
-   - `AWS_REGION` or `DS_STAR_REGION`
-   - `DS_STAR_MODEL_ID` (default: us.amazon.nova-lite-v1:0)
+### Fleet-Wide Fault Rate
+- **Scope**: Company-wide
+- **KPI**: Fault Rate
+- **Root Cause**: EICAS software update affecting fault detection
+- **Expected Findings**:
+  - Cross-station: All stations affected equally
+  - Pre/post shift: Clear before/after pattern
 
-## Tips for Presenters
+## Diagnostic Test Flow
 
-### Before the Demo:
-- Test the demo script beforehand to ensure credentials work
-- Review `sample_queries.md` to understand routing behavior
+```
+Investigation Created
+        │
+        ▼
+┌───────────────────┐
+│ Signal            │ → Identifies Rule #1 violations
+│ Characterization  │   Stage changes, MR signals
+└─────────┬─────────┘
+          │
+          ▼
+┌───────────────────┐
+│ YoY Seasonality   │ → Compares to year-over-year
+└─────────┬─────────┘
+          │
+          ▼
+┌───────────────────┐
+│ Cross-Station     │ → Benchmarks against peers
+└─────────┬─────────┘
+          │
+          ▼
+┌───────────────────┐
+│ Pre/Post Shift    │ → Detects mean shifts
+└─────────┬─────────┘
+          │
+          ▼
+┌───────────────────┐
+│ Final Summary     │ → Synthesizes with confidence
+└───────────────────┘
+```
+
+## Presenter Tips
+
+### Before the Demo
+- Test credentials and model connectivity
+- Review `sample_queries.md` for routing behavior
 - Prepare talking points for each scenario
-- Consider running in verbose mode to show investigation details
+- Consider running verbose mode to show investigation details
 
-### During the Demo:
+### During the Demo
 - Use interactive mode to control pacing
 - Explain the star topology when showing multi-domain queries
 - Highlight the investigation stream output
 - Point out response synthesis from multiple specialists
 - Show the chart specification JSON output
 
-### Key Points to Emphasize:
+### Key Points to Emphasize
 - **Star Topology**: Central orchestrator coordinates all specialists
 - **Intelligent Routing**: Automatic query analysis and specialist selection
-- **Context Sharing**: Conversation history flows between agents
+- **Wheeler XmR**: Industry-standard SPC methodology
+- **Confidence Scoring**: Each diagnostic test returns confidence levels
 - **Transparency**: Investigation stream shows all reasoning steps
-- **Extensibility**: Easy to add new specialist agents
+
+## Command-Line Options
+
+```bash
+python demo/run_demo.py [OPTIONS]
+
+Options:
+  --auto              Auto-advance through scenarios
+  --verbose           Show detailed investigation output
+  --model MODEL_ID    Override model ID
+  --region REGION     Override AWS region
+  --config FILE       Load from config file
+```
 
 ## Troubleshooting
 
-**"Error: strands-agents package not installed"**
-- Run: `pip install strands-agents strands-agents-tools`
+| Error | Solution |
+|-------|----------|
+| "strands-agents not installed" | `pip install strands-agents strands-agents-tools` |
+| "Failed to validate credentials" | Check AWS credentials or API keys |
+| "FileNotFoundError: airline_operations.csv" | Run `python src/data/generate_sample_data.py` |
+| "ECONNREFUSED 127.0.0.1:8000" | Start backend with `start_backend.bat` |
 
-**"Failed to validate AWS Bedrock credentials"**
-- Ensure AWS credentials are configured
-- Check that your region supports Amazon Nova models
-- Verify IAM permissions for Bedrock access
+## Customizing Scenarios
 
-**"FileNotFoundError: data/airline_operations.csv"**
-- Generate sample data: `python src/data/generate_sample_data.py`
-
-**Demo runs too fast in auto mode**
-- Adjust pause durations in the scenario definitions
-- Use interactive mode instead for better control
-
-## Customizing the Demo
-
-To add your own scenarios, edit `run_demo.py` and modify the `_create_scenarios()` method:
+Add new scenarios in `run_demo.py`:
 
 ```python
 DemoScenario(
     title="Your Scenario Title",
     query="Your query here",
-    explanation="Presenter notes and what to watch for",
-    expected_routing=["data_analyst"],  # or multiple specialists
-    pause_duration=5.0  # seconds
+    explanation="Presenter notes",
+    expected_routing=["data_analyst", "visualization_expert"],
+    pause_duration=5.0
 )
 ```
 
-## Additional Resources
+## Related Documentation
 
-- **Requirements**: `.kiro/specs/ds-star-multi-agent/requirements.md`
-- **Design Document**: `.kiro/specs/ds-star-multi-agent/design.md`
-- **Implementation Tasks**: `.kiro/specs/ds-star-multi-agent/tasks.md`
-- **Main CLI**: `src/main.py` for interactive usage
+- `CODE_REVIEW_SUMMARY.md` - Code quality and security findings
+- `AGENTIC_FRAMEWORK_ANALYSIS.md` - Agent prompt analysis
+- `docs/architecture.html` - System architecture
+- `docs/agent-flow.html` - Agent flow diagrams

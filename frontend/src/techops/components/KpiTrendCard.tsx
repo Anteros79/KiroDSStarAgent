@@ -46,7 +46,7 @@ export function KpiTrendCard({
   const cl = lastPoint?.cl ?? series.npl_cl ?? series.mean
 
   const maxPhase = Math.max(1, ...points.map((p) => p.phase_number ?? 1))
-  const stagesToShow = clamp(weeklyStagesToShow ?? 2, 1, maxPhase)
+  const stagesToShow = clamp(weeklyStagesToShow ?? maxPhase, 1, maxPhase)
   const minPhaseToKeep = Math.max(1, maxPhase - stagesToShow + 1)
   const phaseStartIdx = Math.max(
     0,
@@ -140,16 +140,20 @@ export function KpiTrendCard({
         <div className="col-span-9">
           <PlotAny
             data={[
+              // Main data trace
               window === 'daily'
                 ? ({
                     type: 'bar',
+                    name: 'Daily',
                     x,
                     y,
                     marker: { color: visiblePoints.map((p) => (p.signal_state === 'critical' ? SW_RED : SW_BLUE)) },
                     hovertemplate: 'Day: %{x}<br>Value: %{y}<extra></extra>',
+                    showlegend: false,
                   } as any)
                 : ({
                     type: 'scatter',
+                    name: 'Values',
                     mode: 'lines+markers',
                     x,
                     y,
@@ -159,17 +163,20 @@ export function KpiTrendCard({
                     },
                     line: { color: SW_BLUE, width: 2 },
                     hovertemplate: 'Week: %{x}<br>Value: %{y}<extra></extra>',
+                    showlegend: false,
                   } as any),
-              { type: 'scatter', mode: 'lines', x, y: uclSeries, line: { color: SW_RED, width: 1, dash: 'dot' }, hoverinfo: 'skip' } as any,
-              { type: 'scatter', mode: 'lines', x, y: lclSeries, line: { color: SW_GOLD, width: 1, dash: 'dot' }, hoverinfo: 'skip' } as any,
-              { type: 'scatter', mode: 'lines', x, y: clSeries, line: { color: SW_CHARCOAL, width: 1, dash: 'dash' }, hoverinfo: 'skip' } as any,
+              // Control limit traces - hidden from legend
+              { type: 'scatter', name: 'UCL', mode: 'lines', x, y: uclSeries, line: { color: SW_RED, width: 1, dash: 'dot' }, hoverinfo: 'skip', showlegend: false } as any,
+              { type: 'scatter', name: 'LCL', mode: 'lines', x, y: lclSeries, line: { color: SW_GOLD, width: 1, dash: 'dot' }, hoverinfo: 'skip', showlegend: false } as any,
+              { type: 'scatter', name: 'CL', mode: 'lines', x, y: clSeries, line: { color: SW_CHARCOAL, width: 1, dash: 'dash' }, hoverinfo: 'skip', showlegend: false } as any,
             ]}
             layout={{
               height: 140,
               margin: { l: 12, r: 12, t: 10, b: window === 'daily' ? 44 : 26 },
               paper_bgcolor: 'rgba(0,0,0,0)',
               plot_bgcolor: 'rgba(0,0,0,0)',
-              dragmode: 'zoom',
+              dragmode: false,
+              showlegend: false,
               xaxis:
                 window === 'daily'
                   ? {
@@ -181,6 +188,7 @@ export function KpiTrendCard({
                       ticktext: dailyTickText,
                       tickfont: { size: 10, color: SW_CHARCOAL },
                       automargin: true,
+                      fixedrange: true,
                     }
                   : {
                       showgrid: false,
@@ -191,6 +199,7 @@ export function KpiTrendCard({
                       ticktext: weeklyTickText,
                       tickfont: { size: 10, color: SW_CHARCOAL },
                       automargin: true,
+                      fixedrange: true,
                     },
               yaxis: {
                 showgrid: false,
@@ -198,6 +207,7 @@ export function KpiTrendCard({
                 showticklabels: true,
                 nticks: 3,
                 tickfont: { size: 9, color: SW_CHARCOAL },
+                fixedrange: true,
               },
               shapes: stageChangeTs.map((t) => ({
                 type: 'line',
@@ -210,7 +220,7 @@ export function KpiTrendCard({
                 line: { color: SW_SLATE, width: 1, dash: 'dot' },
               })),
             }}
-            config={{ displayModeBar: false, responsive: true, scrollZoom: true }}
+            config={{ displayModeBar: false, responsive: true, scrollZoom: false }}
             style={{ width: '100%' }}
             onClick={(ev: any) => {
               ev?.event?.stopPropagation?.()

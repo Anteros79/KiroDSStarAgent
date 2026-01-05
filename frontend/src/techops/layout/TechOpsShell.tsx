@@ -1,8 +1,8 @@
 import { ReactNode, useEffect, useRef, useState } from 'react'
 import { DemoIdentity } from '../types'
-import { Wifi, WifiOff, ChevronDown, Cpu } from 'lucide-react'
+import { Wifi, WifiOff, ChevronDown, Cpu, Shield } from 'lucide-react'
 
-type TabKey = 'dashboard' | 'investigation' | 'fleet' | 'reports'
+type TabKey = 'dashboard' | 'investigation' | 'admin' | 'fleet' | 'reports'
 
 interface TechOpsShellProps {
   isConnected: boolean
@@ -65,20 +65,23 @@ export function TechOpsShell({
             {([
               ['dashboard', 'Dashboard'],
               ['investigation', 'Investigation'],
+              ['admin', 'Admin Review'],
               ['fleet', 'Fleet Status'],
               ['reports', 'Reports'],
             ] as const).map(([key, label]) => {
               const k = key as TabKey
               const isActive = activeTab === k
+              const isAdmin = key === 'admin'
               return (
                 <button
                   key={key}
                   onClick={() => onTabChange(k)}
                   className={[
-                    'px-3 py-2 rounded-lg text-sm font-semibold transition-colors',
+                    'px-3 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-1.5',
                     isActive ? 'bg-white/10 text-white' : 'text-white/80 hover:text-white hover:bg-white/10',
                   ].join(' ')}
                 >
+                  {isAdmin && <Shield className="w-3.5 h-3.5" />}
                   {label}
                 </button>
               )

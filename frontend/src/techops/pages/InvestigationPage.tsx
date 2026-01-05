@@ -4,6 +4,7 @@ import { InvestigationRecord, TechOpsKPI } from '../types'
 import { InvestigationWorkbench } from '../../components/investigation/InvestigationWorkbench'
 import { ArrowLeft, Share2, FileDown, CheckCircle2 } from 'lucide-react'
 import ChartDisplay from '../../components/ChartDisplay'
+import { DiagnosticPills } from '../components/DiagnosticPills'
 
 export function InvestigationPage({
   investigationId,
@@ -154,27 +155,13 @@ export function InvestigationPage({
 
         {inv && (inv.diagnostics?.length || inv.telemetry) && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="lg:col-span-1 bg-white border border-slate-200 rounded-xl p-5">
-              <div className="text-sm font-extrabold text-slate-900">DS‑STAR Diagnostics</div>
-              <div className="text-xs text-slate-500 mt-1">Automated tests run for this investigation</div>
-              <div className="mt-4 space-y-3">
-                {Array.from(new Map((inv.diagnostics || []).map((d) => [d.name, d])).values()).map((t) => (
-                  <div key={t.name} className="rounded-lg border border-slate-200 p-3 bg-slate-50">
-                    <div className="flex items-center justify-between">
-                      <div className="text-sm font-bold text-slate-900">{t.name}</div>
-                      <span className="text-xs font-bold px-2 py-0.5 rounded-full border border-slate-200 bg-white text-slate-700">
-                        {String(t.status).split('_').join(' ').toUpperCase()}
-                      </span>
-                    </div>
-                    {typeof t.confidence === 'number' && (
-                      <div className="mt-2 text-xs text-slate-600">
-                        Confidence: <span className="font-bold">{Math.round(t.confidence * 100)}%</span>
-                      </div>
-                    )}
-                    {t.detail && <div className="mt-1 text-xs text-slate-600">{t.detail}</div>}
-                  </div>
-                ))}
-              </div>
+            <div className="lg:col-span-1 bg-white border border-slate-200 rounded-xl p-4">
+              <DiagnosticPills 
+                diagnostics={(inv.diagnostics || []).map(d => ({
+                  ...d,
+                  confidence: d.confidence ?? 0.75,
+                }))} 
+              />
             </div>
 
             <div className="lg:col-span-2 bg-white border border-slate-200 rounded-xl overflow-hidden">

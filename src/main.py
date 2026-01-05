@@ -28,6 +28,8 @@ from src.data.airline_data import initialize_data_loader
 try:
     from strands.models.bedrock import BedrockModel
     from strands.models.ollama import OllamaModel
+    from strands.models.openai import OpenAIModel
+    from strands.models.anthropic import AnthropicModel
 except ImportError:
     print("Error: strands-agents package not installed.")
     print("Please install with: pip install strands-agents strands-agents-tools ollama")
@@ -134,14 +136,43 @@ class DSStarCLI:
             logger.info("Investigation stream handler initialized")
             
             # Initialize model based on provider
-            if self.config.model_provider == "ollama":
+            if self.config.model_provider == "lemonade":
+                logger.info(f"Connecting to Lemonade server at {self.config.lemonade_base_url}...")
+                model = OpenAIModel(
+                    model_id=self.config.model_id,
+                    base_url=self.config.lemonade_base_url,
+                    api_key="not-needed",  # Lemonade doesn't require an API key
+                    max_tokens=self.config.max_tokens,
+                    temperature=self.config.temperature
+                )
+                logger.info(f"Lemonade model initialized: {self.config.model_id}")
+            elif self.config.model_provider == "anthropic":
+                logger.info("Connecting to Anthropic...")
+                from strands.models.anthropic import AnthropicModel
+                model = AnthropicModel(
+                    model_id=self.config.model_id,
+                    api_key=self.config.anthropic_api_key,
+                    max_tokens=self.config.max_tokens,
+                    temperature=self.config.temperature
+                )
+                logger.info(f"Anthropic model initialized: {self.config.model_id}")
+            elif self.config.model_provider == "openai":
+                logger.info("Connecting to OpenAI...")
+                model = OpenAIModel(
+                    model_id=self.config.model_id,
+                    api_key=self.config.openai_api_key,
+                    max_tokens=self.config.max_tokens,
+                    temperature=self.config.temperature
+                )
+                logger.info(f"OpenAI model initialized: {self.config.model_id}")
+            elif self.config.model_provider == "ollama":
                 logger.info(f"Connecting to Ollama at {self.config.ollama_host}...")
                 model = OllamaModel(
                     model_id=self.config.model_id,
                     host=self.config.ollama_host,
                 )
                 logger.info(f"Ollama model initialized: {self.config.model_id}")
-            else:
+            elif self.config.model_provider == "bedrock":
                 logger.info("Connecting to Amazon Bedrock...")
                 model = BedrockModel(
                     model_id=self.config.model_id,
@@ -150,6 +181,8 @@ class DSStarCLI:
                     temperature=self.config.temperature
                 )
                 logger.info(f"Bedrock model initialized: {self.config.model_id}")
+            else:
+                raise ValueError(f"Unsupported model provider: {self.config.model_provider}")
             
             # Create specialist agents dictionary
             specialists = {
@@ -175,16 +208,54 @@ class DSStarCLI:
             return False
 
     def validate_credentials(self) -> bool:
-        """Validate Amazon Bedrock credentials on startup.
+        """Validate model provider connection on startup.
         
-        This method attempts to verify that the AWS credentials are valid
-        and that the Bedrock service is accessible.
+        This method attempts to verify that the model provider is accessible
+        and properly configured.
         
         Returns:
-            True if credentials are valid, False otherwise
+            True if connection is valid, False otherwise
         """
         try:
-            if self.config.model_provider == "ollama":
+            if self.config.model_provider == "lemonade":
+                logger.info(f"Validating Lemonade server connection at {self.config.lemonade_base_url}...")
+                # For Lemonade, try to create the model - it will fail if server is not running
+                test_model = OpenAIModel(
+                    model_id=self.config.model_id,
+                    base_url=self.config.lemonade_base_url,
+                    api_key="not-needed",
+                    max_tokens=100,
+                    temperature=0.3
+                )
+                logger.info("✓ Lemonade server connection validated successfully")
+                return True
+            elif self.config.model_provider == "anthropic":
+                logger.info("Validating Anthropic API key...")
+                if not self.config.anthropic_api_key:
+                    logger.error("Anthropic API key not configured")
+                    return False
+                test_model = AnthropicModel(
+                    model_id=self.config.model_id,
+                    api_key=self.config.anthropic_api_key,
+                    max_tokens=100,
+                    temperature=0.3
+                )
+                logger.info("✓ Anthropic API key validated successfully")
+                return True
+            elif self.config.model_provider == "openai":
+                logger.info("Validating OpenAI API key...")
+                if not self.config.openai_api_key:
+                    logger.error("OpenAI API key not configured")
+                    return False
+                test_model = OpenAIModel(
+                    model_id=self.config.model_id,
+                    api_key=self.config.openai_api_key,
+                    max_tokens=100,
+                    temperature=0.3
+                )
+                logger.info("✓ OpenAI API key validated successfully")
+                return True
+            elif self.config.model_provider == "ollama":
                 logger.info(f"Validating Ollama connection at {self.config.ollama_host}...")
                 # For Ollama, just try to create the model - it will fail if server is not running
                 test_model = OllamaModel(
@@ -193,7 +264,7 @@ class DSStarCLI:
                 )
                 logger.info("✓ Ollama connection validated successfully")
                 return True
-            else:
+            elif self.config.model_provider == "bedrock":
                 logger.info("Validating Amazon Bedrock credentials...")
                 
                 # Check for required environment variables
@@ -212,14 +283,29 @@ class DSStarCLI:
                 
                 logger.info("✓ Bedrock credentials validated successfully")
                 return True
+            else:
+                logger.warning(f"Unknown provider '{self.config.model_provider}', skipping validation")
+                return True
             
         except Exception as e:
-            logger.error(f"✗ Credential validation failed: {e}")
-            if self.config.model_provider == "ollama":
+            logger.error(f"✗ Connection validation failed: {e}")
+            if self.config.model_provider == "lemonade":
+                logger.error("Please ensure Lemonade server is running at the configured base URL.")
+            elif self.config.model_provider == "anthropic":
+                logger.error("Please ensure you have a valid Anthropic API key configured.")
+                logger.error("You can set the API key via:")
+                logger.error("  1. Environment variable: ANTHROPIC_API_KEY=your-key-here")
+                logger.error("  2. Config file with anthropic_api_key field")
+            elif self.config.model_provider == "openai":
+                logger.error("Please ensure you have a valid OpenAI API key configured.")
+                logger.error("You can set the API key via:")
+                logger.error("  1. Environment variable: OPENAI_API_KEY=your-key-here")
+                logger.error("  2. Config file with openai_api_key field")
+            elif self.config.model_provider == "ollama":
                 logger.error("Please ensure Ollama is running and the model is available.")
                 logger.error(f"  1. Start Ollama: ollama serve")
                 logger.error(f"  2. Pull model: ollama pull {self.config.model_id}")
-            else:
+            elif self.config.model_provider == "bedrock":
                 logger.error("Please ensure you have valid AWS credentials configured.")
                 logger.error("You can set credentials via:")
                 logger.error("  1. Environment variables: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY")
@@ -233,15 +319,19 @@ class DSStarCLI:
         print("  DS-Star Multi-Agent System")
         if self.config.model_provider == "ollama":
             print(f"  Provider: Ollama ({self.config.ollama_host})")
-        else:
+        elif self.config.model_provider == "openai":
+            print(f"  Provider: OpenAI")
+        elif self.config.model_provider == "bedrock":
             print(f"  Provider: Amazon Bedrock ({self.config.region})")
+        else:
+            print(f"  Provider: {self.config.model_provider}")
         print("=" * 70)
         print(f"\nConfiguration:")
         print(f"  Provider: {self.config.model_provider}")
         print(f"  Model: {self.config.model_id}")
         if self.config.model_provider == "ollama":
             print(f"  Ollama Host: {self.config.ollama_host}")
-        else:
+        elif self.config.model_provider == "bedrock":
             print(f"  Region: {self.config.region}")
         print(f"  Verbose: {self.config.verbose}")
         print(f"  Output Directory: {self.config.output_dir}")
@@ -423,6 +513,9 @@ Examples:
   # Run in verbose mode
   python -m src.main --verbose
   
+  # Use OpenAI GPT-4
+  python -m src.main --provider openai --model gpt-4o
+  
   # Use a different local Ollama model
   python -m src.main --provider ollama --model llama3.1:8b
   
@@ -430,8 +523,9 @@ Examples:
   python -m src.main --provider bedrock --model us.amazon.nova-lite-v1:0 --region us-west-2
   
 Environment Variables:
-  DS_STAR_MODEL_PROVIDER - "ollama" or "bedrock"
-  DS_STAR_MODEL_ID       - Model ID (Ollama tag or Bedrock model ID)
+  DS_STAR_MODEL_PROVIDER - "lemonade", "anthropic", "openai", "ollama", or "bedrock"
+  DS_STAR_MODEL_ID       - Model ID (varies by provider)
+  OPENAI_API_KEY         - OpenAI API key (required for openai provider)
   DS_STAR_OLLAMA_HOST    - Ollama host URL (default: http://localhost:11434)
   DS_STAR_REGION         - AWS region (or use AWS_REGION)
   AWS_REGION             - AWS region (alternative)
@@ -450,14 +544,14 @@ Environment Variables:
     parser.add_argument(
         "--provider",
         type=str,
-        choices=["ollama", "bedrock"],
-        help="Model provider: ollama or bedrock (default: ollama)"
+        choices=["lemonade", "anthropic", "openai", "ollama", "bedrock"],
+        help="Model provider: lemonade, anthropic, openai, ollama, or bedrock (default: lemonade)"
     )
 
     parser.add_argument(
         "--model",
         type=str,
-        help="Model ID (e.g., gemma3:27b for Ollama, us.amazon.nova-lite-v1:0 for Bedrock)"
+        help="Model ID (e.g., gpt-4o for OpenAI, qwen3:30b for Ollama, us.amazon.nova-lite-v1:0 for Bedrock)"
     )
     
     parser.add_argument(

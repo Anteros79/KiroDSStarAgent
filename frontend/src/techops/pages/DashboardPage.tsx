@@ -3,10 +3,7 @@ import { techOpsApi } from '../api'
 import { ActiveSignalsResponse, InvestigationRecord, TechOpsDashboardResponse } from '../types'
 import { SignalChips } from '../components/SignalChips'
 import { KpiTrendCard } from '../components/KpiTrendCard'
-
-function clamp(n: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, n))
-}
+import { Clock, CheckCircle2, AlertTriangle, FileSearch } from 'lucide-react'
 
 export function DashboardPage({
   station,
@@ -69,8 +66,11 @@ export function DashboardPage({
     return max
   }, [weekly])
 
+  // Initialize stages to show at max when data loads
   useEffect(() => {
-    setWeeklyStagesToShow((v) => clamp(v, 1, maxWeeklyPhases))
+    if (maxWeeklyPhases > 1) {
+      setWeeklyStagesToShow(maxWeeklyPhases)
+    }
   }, [maxWeeklyPhases])
 
   const data = useMemo(() => (window === 'weekly' ? weekly : daily), [window, weekly, daily])
@@ -184,77 +184,125 @@ export function DashboardPage({
         )}
 
         {!loading && !error && investigations && (
-          <div className="bg-white border border-slate-200 rounded-xl p-5">
-            <div className="flex items-center justify-between">
+          <div className="bg-white border border-slate-200 rounded-xl p-4">
+            {/* Header with status summary */}
+            <div className="flex items-center justify-between mb-4">
               <div>
-                <div className="text-lg font-extrabold text-slate-900">Station Signal Monitor</div>
-                <div className="text-sm text-slate-600 mt-1">
-                  Investigations for <span className="font-semibold">{station}</span>. Click a card to review details.
+                <div className="text-lg font-extrabold text-slate-900">Investigation Monitor</div>
+                <div className="text-sm text-slate-600">
+                  Station <span className="font-semibold">{station}</span> - Click to review details
                 </div>
               </div>
-              <div className="text-sm text-slate-600">
-                Total: <span className="font-bold text-slate-900">{invGrid.length}</span>
+              
+              {/* Status Summary Pills */}
+              <div className="flex items-center gap-2">
+                <StatusPill 
+                  icon={Clock} 
+                  label="In Progress" 
+                  count={invGrid.filter(i => i.status === 'in_progress' || i.status === 'open').length}
+                  color="blue"
+                />
+                <StatusPill 
+                  icon={CheckCircle2} 
+                  label="Completed" 
+                  count={invGrid.filter(i => i.status === 'completed' || i.status === 'finalized').length}
+                  color="emerald"
+                />
+                <StatusPill 
+                  icon={AlertTriangle} 
+                  label="Critical" 
+                  count={invGrid.filter(i => signalByKpi.get(i.kpi_id) === 'critical').length}
+                  color="rose"
+                />
               </div>
             </div>
 
             {invGrid.length === 0 ? (
-              <div className="mt-4 text-slate-600">No investigations yet. Click any KPI above to start one.</div>
+              <div className="flex flex-col items-center justify-center py-8 text-slate-500">
+                <FileSearch className="w-12 h-12 mb-3 text-slate-300" />
+                <div className="text-sm font-medium">No investigations yet</div>
+                <div className="text-xs mt-1">Click any KPI card above to start an investigation</div>
+              </div>
             ) : (
-              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
                 {invGrid.map((inv) => {
                   const sig = (signalByKpi.get(inv.kpi_id) || 'none') as 'none' | 'warning' | 'critical'
-                  const sigStyle =
-                    sig === 'critical'
-                      ? 'bg-rose-50 border-rose-200 text-rose-800'
-                      : sig === 'warning'
-                        ? 'bg-amber-50 border-amber-200 text-amber-800'
-                        : 'bg-slate-50 border-slate-200 text-slate-700'
+                  const isCompleted = inv.status === 'completed' || inv.status === 'finalized'
+                  const hasRootCause = !!inv.final_root_cause
+                  const diagnosticCount = inv.diagnostics?.length || 0
+                  const completedDiagnostics = inv.diagnostics?.filter(d => d.status === 'completed').length || 0
 
                   return (
                     <button
                       key={inv.investigation_id}
                       onClick={() => onSelectInvestigation?.(inv.investigation_id)}
-                      className="text-left rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition-colors p-4"
-                      title="Open investigation"
+                      className={`text-left rounded-lg border transition-all p-3 ${
+                        sig === 'critical' 
+                          ? 'border-rose-200 bg-rose-50/50 hover:bg-rose-50' 
+                          : sig === 'warning'
+                            ? 'border-amber-200 bg-amber-50/50 hover:bg-amber-50'
+                            : 'border-slate-200 bg-white hover:bg-slate-50'
+                      }`}
                       type="button"
                     >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <div className="text-xs text-slate-500 font-semibold">INVESTIGATION</div>
-                          <div className="text-sm font-extrabold text-slate-900">#{inv.investigation_id}</div>
+                      {/* Header Row */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          {isCompleted ? (
+                            <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                          ) : (
+                            <Clock className="w-4 h-4 text-blue-500 flex-shrink-0 animate-pulse" />
+                          )}
+                          <span className="text-xs font-bold text-slate-500">#{inv.investigation_id}</span>
                         </div>
-                        <span className={`px-2 py-1 rounded-full text-xs font-extrabold border ${sigStyle}`}>{sig.toUpperCase()}</span>
+                        <SignalBadge signal={sig} />
                       </div>
 
-                      <div className="mt-3">
-                        <div className="text-xs text-slate-500 font-semibold">KPI</div>
-                        <div className="text-sm font-bold text-slate-900">{inv.kpi_id.split('_').join(' ')}</div>
-                      </div>
-
-                      <div className="mt-3 grid grid-cols-2 gap-3">
-                        <div>
-                          <div className="text-xs text-slate-500 font-semibold">STATUS</div>
-                          <div className="text-sm font-bold text-slate-900">{String(inv.status || '').toUpperCase()}</div>
+                      {/* KPI Name */}
+                      <div className="mt-2">
+                        <div className="text-sm font-bold text-slate-900">
+                          {inv.kpi_id.split('_').join(' ')}
                         </div>
-                        <div>
-                          <div className="text-xs text-slate-500 font-semibold">WINDOW</div>
-                          <div className="text-sm font-bold text-slate-900">{String(inv.window || '').toUpperCase()}</div>
+                        <div className="text-xs text-slate-500 mt-0.5">
+                          {inv.window.toUpperCase()} • {inv.created_at ? new Date(inv.created_at).toLocaleDateString() : 'Recent'}
                         </div>
                       </div>
 
-                      <div className="mt-3">
-                        <div className="text-xs text-slate-500 font-semibold">FINAL ROOT CAUSE</div>
-                        <div className="text-sm font-bold text-slate-900">{inv.final_root_cause ? inv.final_root_cause : '-'}</div>
+                      {/* Progress/Results */}
+                      <div className="mt-2 pt-2 border-t border-slate-100">
+                        {hasRootCause ? (
+                          <div>
+                            <div className="text-xs font-semibold text-slate-500">ROOT CAUSE</div>
+                            <div className="text-xs text-slate-700 mt-0.5 line-clamp-2">{inv.final_root_cause}</div>
+                          </div>
+                        ) : diagnosticCount > 0 ? (
+                          <div className="flex items-center justify-between">
+                            <div className="text-xs text-slate-600">
+                              Diagnostics: <span className="font-bold">{completedDiagnostics}/{diagnosticCount}</span>
+                            </div>
+                            <div className="w-16 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                              <div 
+                                className="h-full bg-blue-500 rounded-full transition-all"
+                                style={{ width: `${(completedDiagnostics / diagnosticCount) * 100}%` }}
+                              />
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-xs text-slate-500 italic">Analysis pending...</div>
+                        )}
                       </div>
 
-                      <div className="mt-3 flex items-center justify-between text-xs text-slate-600">
-                        <span>
-                          Actions: <span className="font-bold text-slate-900">{inv.final_actions?.length || 0}</span>
-                        </span>
-                        <span>
-                          Evidence: <span className="font-bold text-slate-900">{inv.final_evidence?.length || 0}</span>
-                        </span>
-                      </div>
+                      {/* Footer Stats */}
+                      {(inv.final_actions?.length || inv.final_evidence?.length) ? (
+                        <div className="mt-2 flex items-center gap-3 text-xs text-slate-500">
+                          {inv.final_actions?.length ? (
+                            <span>{inv.final_actions.length} action{inv.final_actions.length !== 1 ? 's' : ''}</span>
+                          ) : null}
+                          {inv.final_evidence?.length ? (
+                            <span>{inv.final_evidence.length} evidence</span>
+                          ) : null}
+                        </div>
+                      ) : null}
                     </button>
                   )
                 })}
@@ -264,5 +312,56 @@ export function DashboardPage({
         )}
       </div>
     </div>
+  )
+}
+
+
+// Helper components for the investigation monitor
+function StatusPill({ 
+  icon: Icon, 
+  label, 
+  count, 
+  color 
+}: { 
+  icon: React.ComponentType<{ className?: string }>
+  label: string
+  count: number
+  color: 'blue' | 'emerald' | 'rose' | 'amber'
+}) {
+  const colorClasses = {
+    blue: 'bg-blue-50 text-blue-700 border-blue-200',
+    emerald: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    rose: 'bg-rose-50 text-rose-700 border-rose-200',
+    amber: 'bg-amber-50 text-amber-700 border-amber-200',
+  }
+
+  return (
+    <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-semibold ${colorClasses[color]}`}>
+      <Icon className="w-3.5 h-3.5" />
+      <span>{count}</span>
+      <span className="hidden sm:inline">{label}</span>
+    </div>
+  )
+}
+
+function SignalBadge({ signal }: { signal: 'none' | 'warning' | 'critical' }) {
+  if (signal === 'critical') {
+    return (
+      <span className="px-1.5 py-0.5 rounded text-xs font-bold bg-rose-100 text-rose-700 border border-rose-200">
+        CRITICAL
+      </span>
+    )
+  }
+  if (signal === 'warning') {
+    return (
+      <span className="px-1.5 py-0.5 rounded text-xs font-bold bg-amber-100 text-amber-700 border border-amber-200">
+        WARNING
+      </span>
+    )
+  }
+  return (
+    <span className="px-1.5 py-0.5 rounded text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200">
+      STABLE
+    </span>
   )
 }

@@ -15,7 +15,9 @@ def test_config_defaults():
     """Test that Config has correct default values."""
     config = Config()
     
-    assert config.model_id == "us.amazon.nova-lite-v1:0"
+    # Default provider is now Lemonade
+    assert config.model_id == "Qwen3-Next-80B-A3B-Instruct-GGUF"
+    assert config.model_provider == "lemonade"
     assert config.region == "us-west-2"
     assert config.verbose is False
     assert config.max_tokens == 4096

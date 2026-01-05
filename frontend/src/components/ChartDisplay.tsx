@@ -45,7 +45,7 @@ export default function ChartDisplay({ chart }: ChartDisplayProps) {
             responsive: true,
             displayModeBar: true,
             displaylogo: false,
-            scrollZoom: true,
+            scrollZoom: false,
           }}
           style={{ width: '100%', height: '520px' }}
         />

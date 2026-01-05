@@ -11,10 +11,13 @@ import yaml
 
 logger = logging.getLogger(__name__)
 
-# Default local model tag for Ollama.
+# Default model IDs for each provider.
 # Keep this in sync with `.env.example` and `README.md`.
+DEFAULT_LEMONADE_MODEL_ID = "Qwen3-Next-80B-A3B-Instruct-GGUF"
 DEFAULT_OLLAMA_MODEL_ID = "qwen3:30b"
 DEFAULT_BEDROCK_MODEL_ID = "us.amazon.nova-lite-v1:0"
+DEFAULT_ANTHROPIC_MODEL_ID = "claude-3-5-sonnet-20241022"
+DEFAULT_OPENAI_MODEL_ID = "gpt-4o"
 
 
 @dataclass
@@ -22,8 +25,10 @@ class Config:
     """Configuration for DS-Star multi-agent system.
     
     Attributes:
-        model_provider: Model provider ("ollama" or "bedrock")
-        model_id: Model identifier (e.g., "gemma3:27b" for Ollama, "us.amazon.nova-lite-v1:0" for Bedrock)
+        model_provider: Model provider ("lemonade", "anthropic", "ollama", or "bedrock")
+        model_id: Model identifier (e.g., "Qwen3-Next-80B-A3B-Instruct-GGUF" for Lemonade, "claude-3-5-sonnet-20241022" for Anthropic, "qwen3:30b" for Ollama, "us.amazon.nova-lite-v1:0" for Bedrock)
+        lemonade_base_url: Lemonade server base URL (default: http://localhost:8000/api/v1)
+        anthropic_api_key: Anthropic API key (for anthropic provider)
         ollama_host: Ollama server URL (default: http://127.0.0.1:11434)
         region: AWS region for Bedrock API
         verbose: Enable detailed logging and investigation stream output
@@ -35,8 +40,11 @@ class Config:
         retry_delay_base: Base delay in seconds for exponential backoff
     """
     
-    model_provider: str = "ollama"  # "ollama" or "bedrock"
-    model_id: str = DEFAULT_OLLAMA_MODEL_ID  # Default to local Ollama model tag
+    model_provider: str = "lemonade"  # "lemonade" (default), "anthropic", "openai", "ollama", or "bedrock"
+    model_id: str = DEFAULT_LEMONADE_MODEL_ID  # Default to Lemonade model
+    lemonade_base_url: str = "http://localhost:8000/api/v1"
+    anthropic_api_key: Optional[str] = None
+    openai_api_key: Optional[str] = None
     ollama_host: str = "http://127.0.0.1:11434"
     region: str = "us-west-2"
     verbose: bool = False
@@ -47,13 +55,39 @@ class Config:
     retry_attempts: int = 3
     retry_delay_base: float = 1.0
     
+    def _apply_provider_default_model(self) -> None:
+        """Apply provider-specific default model if model_id hasn't been explicitly set.
+        
+        This ensures that when switching providers, the model_id defaults to an
+        appropriate value for that provider rather than keeping a model from another provider.
+        """
+        provider_defaults = {
+            "lemonade": DEFAULT_LEMONADE_MODEL_ID,
+            "anthropic": DEFAULT_ANTHROPIC_MODEL_ID,
+            "openai": DEFAULT_OPENAI_MODEL_ID,
+            "ollama": DEFAULT_OLLAMA_MODEL_ID,
+            "bedrock": DEFAULT_BEDROCK_MODEL_ID,
+        }
+        
+        # Check if current model_id belongs to a different provider
+        other_provider_models = {
+            model for provider, model in provider_defaults.items() 
+            if provider != self.model_provider
+        }
+        
+        if self.model_id in other_provider_models:
+            self.model_id = provider_defaults.get(self.model_provider, self.model_id)
+    
     @classmethod
     def from_env(cls) -> "Config":
         """Load configuration from environment variables.
         
         Environment variables:
-            DS_STAR_MODEL_PROVIDER: Model provider ("ollama" or "bedrock", default: ollama)
-            DS_STAR_MODEL_ID: Model identifier (default: gemma3:27b for ollama)
+            DS_STAR_MODEL_PROVIDER: Model provider ("lemonade", "anthropic", "openai", "ollama", or "bedrock", default: lemonade)
+            DS_STAR_MODEL_ID: Model identifier (default varies by provider)
+            DS_STAR_LEMONADE_BASE_URL: Lemonade server base URL (default: http://localhost:8000/api/v1)
+            ANTHROPIC_API_KEY: Anthropic API key (required for anthropic provider)
+            OPENAI_API_KEY: OpenAI API key (required for openai provider)
             DS_STAR_OLLAMA_HOST: Ollama server URL (default: http://127.0.0.1:11434)
             DS_STAR_REGION or AWS_REGION: AWS region (default: us-west-2)
             DS_STAR_VERBOSE: Enable verbose mode (default: False)
@@ -73,13 +107,24 @@ class Config:
         if model_provider := os.getenv("DS_STAR_MODEL_PROVIDER"):
             config.model_provider = model_provider.lower()
 
-        # Provider-specific default model if the user didn't explicitly set one.
-        if config.model_provider == "bedrock" and not os.getenv("DS_STAR_MODEL_ID"):
-            config.model_id = DEFAULT_BEDROCK_MODEL_ID
-        
-        # Load each field from environment with validation
+        # Load model ID (if explicitly set)
         if model_id := os.getenv("DS_STAR_MODEL_ID"):
             config.model_id = model_id
+        else:
+            # Apply provider-specific default if no explicit model_id
+            config._apply_provider_default_model()
+        
+        # Lemonade base URL
+        if lemonade_base_url := os.getenv("DS_STAR_LEMONADE_BASE_URL"):
+            config.lemonade_base_url = lemonade_base_url
+        
+        # Anthropic API key
+        if anthropic_api_key := os.getenv("ANTHROPIC_API_KEY"):
+            config.anthropic_api_key = anthropic_api_key
+        
+        # OpenAI API key
+        if openai_api_key := os.getenv("OPENAI_API_KEY"):
+            config.openai_api_key = openai_api_key
         
         # Ollama host
         if ollama_host := os.getenv("DS_STAR_OLLAMA_HOST"):
@@ -171,13 +216,18 @@ class Config:
             if "model_provider" in data:
                 config.model_provider = str(data["model_provider"]).lower()
 
-            # If the config switches to Bedrock but doesn't specify a model_id,
-            # use the Bedrock default rather than an Ollama model tag.
-            if config.model_provider == "bedrock" and "model_id" not in data:
-                config.model_id = DEFAULT_BEDROCK_MODEL_ID
-            
+            # Load model ID (if explicitly set)
             if "model_id" in data:
                 config.model_id = str(data["model_id"])
+            else:
+                # Apply provider-specific default if no explicit model_id
+                config._apply_provider_default_model()
+            
+            if "anthropic_api_key" in data:
+                config.anthropic_api_key = str(data["anthropic_api_key"])
+            
+            if "openai_api_key" in data:
+                config.openai_api_key = str(data["openai_api_key"])
             
             if "ollama_host" in data:
                 config.ollama_host = str(data["ollama_host"])
@@ -277,6 +327,10 @@ class Config:
             config.model_provider = env_config.model_provider
         if env_config.model_id != default_config.model_id:
             config.model_id = env_config.model_id
+        if env_config.anthropic_api_key is not None:
+            config.anthropic_api_key = env_config.anthropic_api_key
+        if env_config.openai_api_key is not None:
+            config.openai_api_key = env_config.openai_api_key
         if env_config.ollama_host != default_config.ollama_host:
             config.ollama_host = env_config.ollama_host
         if env_config.region != default_config.region:
@@ -296,9 +350,8 @@ class Config:
         if env_config.retry_delay_base != default_config.retry_delay_base:
             config.retry_delay_base = env_config.retry_delay_base
 
-        # Provider-specific default model if provider changed but model_id wasn't set.
-        if config.model_provider == "bedrock" and config.model_id == DEFAULT_OLLAMA_MODEL_ID:
-            config.model_id = DEFAULT_BEDROCK_MODEL_ID
+        # Apply provider-specific default model if needed
+        config._apply_provider_default_model()
         
         return config
     
@@ -311,6 +364,20 @@ class Config:
         Raises:
             ValueError: If any configuration value is invalid
         """
+        # Validate model provider
+        valid_providers = {"lemonade", "anthropic", "openai", "ollama", "bedrock"}
+        if self.model_provider not in valid_providers:
+            raise ValueError(
+                f"model_provider must be one of {valid_providers}, got '{self.model_provider}'"
+            )
+        
+        # Validate provider-specific requirements
+        if self.model_provider == "anthropic" and not self.anthropic_api_key:
+            raise ValueError("anthropic_api_key is required when using Anthropic provider")
+        
+        if self.model_provider == "openai" and not self.openai_api_key:
+            raise ValueError("openai_api_key is required when using OpenAI provider")
+        
         if self.max_tokens <= 0:
             raise ValueError(f"max_tokens must be positive, got {self.max_tokens}")
         

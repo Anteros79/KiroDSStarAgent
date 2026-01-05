@@ -77,6 +77,27 @@ export interface CreateInvestigationResponse {
   prompt: string
 }
 
+export interface InvestigationDiagnostic {
+  name: string
+  status: 'pending' | 'in_progress' | 'completed' | 'failed' | string
+  confidence?: number
+  detail?: string
+  finding?: string
+  selected_t?: string
+  selected_value?: number
+  ucl?: number
+  lcl?: number
+  cl?: number
+  yoy_delta?: number
+  peer_mean?: number
+  pre_mean?: number
+  post_mean?: number
+  delta?: number
+  known_demo_root_cause?: string
+  stage_change?: boolean
+  mr_signal?: boolean
+}
+
 export interface InvestigationRecord {
   investigation_id: string
   kpi_id: string
@@ -89,12 +110,7 @@ export interface InvestigationRecord {
   prompt_mode: 'cause' | 'yoy'
   prompt: string
   selected_point_t?: string | null
-  diagnostics?: Array<{
-    name: string
-    status: 'pending' | 'in_progress' | 'completed' | 'failed' | string
-    confidence?: number
-    detail?: string
-  }>
+  diagnostics?: InvestigationDiagnostic[]
   telemetry?: {
     chart_type: string
     title: string

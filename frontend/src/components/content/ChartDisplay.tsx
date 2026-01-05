@@ -29,7 +29,7 @@ export function ChartDisplay({ chart }: ChartDisplayProps) {
     responsive: true,
     displayModeBar: true,
     modeBarButtonsToRemove: ['lasso2d', 'select2d'] as any,
-    scrollZoom: true,
+    scrollZoom: false,
   }
 
   const plotLayout = {
