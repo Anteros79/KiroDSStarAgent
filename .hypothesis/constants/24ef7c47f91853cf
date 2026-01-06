@@ -1,0 +1,4 @@
+# file: C:\DevProjects\KiroDSStarAgent\KiroDSStarAgent\src\security\security_scanner.py
+# hypothesis_version: 6.148.7
+
+['## Warnings', '=', 'CRITICAL', 'HIGH', 'LOW', 'MEDIUM', 'MINIMAL', 'SECURITY_AUDIT.md', 'annotations_added', 'critical_count', 'high_count', 'low_count', 'medium_count', 'scan_timestamp', 'status', 'total_findings', 'utf-8', 'warnings']

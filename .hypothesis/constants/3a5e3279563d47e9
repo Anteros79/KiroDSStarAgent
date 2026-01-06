@@ -1,0 +1,4 @@
+# file: C:\DevProjects\KiroDSStarAgent\KiroDSStarAgent\src\security\cli.py
+# hypothesis_version: 6.148.7
+
+['%(prog)s 1.0.0', '%Y-%m-%d %H:%M:%S', '--dry-run', '--no-annotations', '--no-verify-tests', '--output', '--quiet', '--test-command', '--verbose', '--version', '-o', '-q', '-v', '.', '?', '__main__', 'repo_path', 'security-audit', 'store_true', 'version']

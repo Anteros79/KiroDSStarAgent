@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { techOpsApi } from '../api'
 import { InvestigationRecord, TechOpsKPI } from '../types'
-import { InvestigationWorkbench } from '../../components/investigation/InvestigationWorkbench'
+import { InvestigationWorkbench, InvestigationWorkbenchRef } from '../../components/investigation/InvestigationWorkbench'
+import { ThingsToConsiderSection } from '../../components/ThingsToConsiderSection'
 import { ArrowLeft, Share2, FileDown, CheckCircle2 } from 'lucide-react'
 import ChartDisplay from '../../components/ChartDisplay'
 import { DiagnosticPills } from '../components/DiagnosticPills'
@@ -18,6 +19,8 @@ export function InvestigationPage({
   const [inv, setInv] = useState<InvestigationRecord | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [kpis, setKpis] = useState<TechOpsKPI[] | null>(null)
+  const [isProcessingQuery, setIsProcessingQuery] = useState(false)
+  const workbenchRef = useRef<InvestigationWorkbenchRef | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -55,6 +58,21 @@ export function InvestigationPage({
   }, [])
 
   const title = inv ? `Investigation #${inv.investigation_id}` : 'Investigation'
+
+  const handleExecuteQuery = (query: string) => {
+    try {
+      if (workbenchRef.current && workbenchRef.current.executeQuery) {
+        setIsProcessingQuery(true)
+        workbenchRef.current.executeQuery(query)
+        // Reset processing state after a delay to allow for query execution
+        setTimeout(() => setIsProcessingQuery(false), 1000)
+      }
+    } catch (error) {
+      console.error('Failed to execute query:', error)
+      setIsProcessingQuery(false)
+      // You could add a toast notification here for user feedback
+    }
+  }
 
   return (
     <div className="px-6 py-6">
@@ -208,8 +226,23 @@ export function InvestigationPage({
           </div>
         )}
 
+        {/* Things to Consider Section */}
+        {inv && (
+          <div className="bg-white border border-slate-200 rounded-xl p-6">
+            <ThingsToConsiderSection
+              investigation={inv}
+              kpiId={inv.kpi_id}
+              station={inv.station}
+              window={inv.window}
+              onExecuteQuery={handleExecuteQuery}
+              isProcessing={isProcessingQuery}
+            />
+          </div>
+        )}
+
         <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
           <InvestigationWorkbench
+            ref={workbenchRef}
             measureName={inv?.kpi_id.split('_').join(' ') || 'Tech Ops KPI'}
             datasetName="techops_demo_metrics"
             initialQuery={inv?.prompt}

@@ -2,8 +2,8 @@
 
 Implementation of the DS-STAR (Data Science Star) multi-agent framework using the AWS Strands Agents SDK. Supports Lemonade (default), Anthropic Claude, OpenAI, local Ollama models, and Amazon Bedrock.
 
-**Last Updated:** January 4, 2026  
-**Version:** 1.0.0
+**Last Updated:** January 6, 2026  
+**Version:** 1.1.0
 
 ## Overview
 
@@ -40,6 +40,8 @@ This system uses a star topology where a central Orchestrator coordinates five s
 - **Wheeler XmR SPC**: Statistical process control for signal detection
 - **Tech Ops Dashboard**: KPI visualization with phase-aware control limits
 - **Investigation Workbench**: Multi-step analysis workflow with approve/refine controls
+- **Things to Consider**: Guided query suggestions with field advice and industry factors
+- **Responsive Design**: Mobile-optimized interface with adaptive layouts
 - **Demo Scenarios**: Pre-built scenarios for presentations
 
 ## Project Structure
@@ -55,6 +57,11 @@ This system uses a star topology where a central Orchestrator coordinates five s
 │   ├── data/                 # Data loaders + demo generators
 │   ├── handlers/             # Stream, chart, error, retry handlers
 │   ├── llm/                  # LLM clients (generic multi-provider + Ollama)
+│   ├── security/             # Security audit and hardening tools
+│   │   ├── models.py         # Security finding data models
+│   │   ├── secret_scanner.py # Hardcoded secrets detection
+│   │   ├── dependency_analyzer.py # CVE vulnerability scanning
+│   │   └── api_auditor.py    # API endpoint security analysis
 │   ├── spc/                  # Wheeler XmR implementation
 │   └── techops/              # Investigation diagnostic tests
 ├── frontend/                 # React/TypeScript UI
@@ -206,11 +213,34 @@ export DS_STAR_MODEL_ID=us.amazon.nova-lite-v1:0
 
 ### Features
 
-- **Weekly View**: Individuals-style line chart with Wheeler phase limits
+- **Weekly View**: Line+markers chart with Wheeler phase limits (proper SPC style)
 - **Daily View**: Bar chart with day-of-week labels (7-30 day slider)
 - **Stage Detection**: Automatic phase change detection with visual markers
-- **XmR Charts**: Individuals + Moving Range combo charts
-- **Signal Detection**: Rule #1 violations highlighted in red
+- **XmR Charts**: Individuals (line+markers) + Moving Range combo charts
+- **Signal Detection**: Rule #1 violations highlighted in red with distinct markers
+- **Things to Consider**: Guided query suggestions to help station managers learn effective DS-Star usage
+
+### Things to Consider Feature
+
+The "Things to Consider" section provides two types of guided query suggestions:
+
+#### Advice from the Field
+- **Dynamic suggestions** based on investigation diagnostics and findings
+- **Similar conditions** from other stations with comparable signals
+- **Context-aware prompts** that include station, KPI, and time window information
+- **Automatic generation** from stage changes, YoY deltas, and peer comparisons
+
+#### Common Industry Causal Factors
+- **Standard factors** to check during root cause analysis
+- **KPI-specific relevance** with factors prioritized by industry best practices
+- **Template-based queries** with automatic context interpolation
+- **Comprehensive coverage** of environmental, resource, fleet, supply chain, and process factors
+
+#### Responsive Design
+- **Mobile-optimized** layout with single-column stacking on viewports < 768px
+- **Adaptive spacing** and typography that scales appropriately across devices
+- **Touch-friendly** suggestion chips with proper sizing and spacing
+- **Consistent styling** that maintains visual hierarchy on all screen sizes
 
 ### Diagnostic Tests
 
@@ -241,6 +271,9 @@ pytest
 # Run specific test file
 pytest tests/test_config.py -v
 
+# Run security module tests
+pytest tests/test_secret_scanner.py tests/test_dependency_analyzer.py tests/test_api_auditor.py -v
+
 # Frontend build check
 cd frontend && npm run build
 ```
@@ -252,6 +285,10 @@ cd frontend && npm run build
 | `test_config.py` | 11 | ✅ All passing |
 | `test_orchestrator.py` | Routing, processing, synthesis | ✅ |
 | `test_specialists.py` | All 5 specialists | ✅ |
+| `test_secret_scanner.py` | Secret detection, masking | ✅ |
+| `test_dependency_analyzer.py` | Dependency parsing, CVE lookup | ✅ |
+| `test_api_auditor.py` | Endpoint detection, auth checks | ✅ |
+| `test_security_models.py` | Data model validation | ✅ |
 
 ## Documentation
 
@@ -261,6 +298,7 @@ cd frontend && npm run build
 | `AGENTIC_FRAMEWORK_ANALYSIS.md` | Agent prompt analysis and improvements |
 | `PROVIDER_QUICK_REFERENCE.md` | LLM provider configuration guide |
 | `LEMONADE_INTEGRATION.md` | Lemonade-specific integration notes |
+| `.kiro/specs/security-audit-hardening/` | Security module spec and tasks |
 | `docs/` | HTML documentation (architecture, specs) |
 | `demo/` | Demo scripts and sample queries |
 
@@ -313,6 +351,82 @@ Returns a tuple: `(content, latency_ms, raw_response)`
 - `content`: The response text (or `None` on error)
 - `latency_ms`: Request latency in milliseconds
 - `raw_response`: Full API response dict (includes `error` key on failure)
+
+## Security Audit Module
+
+The `src/security/` module provides comprehensive security scanning capabilities:
+
+### Secret Scanner
+Detects hardcoded secrets in source code using regex pattern matching:
+- API keys and tokens
+- AWS credentials (Access Key ID, Secret Access Key)
+- Private keys (RSA, OPENSSH, EC, DSA)
+- JWT tokens
+- Database connection strings
+- Generic passwords and secrets
+
+```python
+from src.security.secret_scanner import SecretScanner
+
+scanner = SecretScanner("./")
+findings = scanner.scan_all_files()
+summary = scanner.generate_scan_summary(findings)
+```
+
+### Dependency Analyzer
+Cross-references project dependencies against CVE databases:
+- Parses `requirements.txt` (Python) and `package.json` (Node.js)
+- Integrates with `pip-audit` and `npm audit`
+- Reports CVE IDs, severity scores, and safe versions
+
+```python
+from src.security.dependency_analyzer import DependencyAnalyzer
+
+analyzer = DependencyAnalyzer("./")
+dependencies, findings = analyzer.analyze_all()
+summary = analyzer.get_summary(dependencies, findings)
+```
+
+### API Auditor
+Analyzes API endpoints for OWASP Top 10 vulnerabilities:
+- Detects FastAPI, Flask, and Express endpoints
+- Checks for missing authorization controls
+- Identifies injection risks (SQL, command, code execution)
+- Flags unvalidated user inputs
+
+```python
+from src.security.api_auditor import APIAuditor
+
+auditor = APIAuditor("./")
+findings = auditor.audit_all_files()
+summary = auditor.get_summary(findings)
+```
+
+### Report Generator
+Generates comprehensive SECURITY_AUDIT.md reports:
+- Executive summary with overall risk assessment
+- Key metrics table (findings by severity)
+- Category breakdown (secrets, dependencies, auth, injection)
+- Effort estimates for remediation planning
+
+```python
+from src.security.report_generator import ReportGenerator
+from src.security.models import AuditReport
+
+report = AuditReport()
+# ... add findings to report ...
+generator = ReportGenerator(report)
+risk_level = generator.calculate_risk_assessment(findings)
+summary_md = generator.generate_executive_summary(findings)
+```
+
+### Security Models
+All findings use structured data models with severity levels:
+- `Severity`: CRITICAL, HIGH, MEDIUM, LOW, INFO
+- `FindingCategory`: HARDCODED_SECRET, VULNERABLE_DEPENDENCY, MISSING_AUTHZ, INJECTION_RISK, INSECURE_CONFIG
+- `AuditReport`: Aggregates findings with summary counts
+
+---
 
 ## Security Considerations
 

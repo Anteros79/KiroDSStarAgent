@@ -1,0 +1,4 @@
+# file: C:\DevProjects\KiroDSStarAgent\KiroDSStarAgent\src\security\models.py
+# hypothesis_version: 6.148.7
+
+['Critical', 'Hardcoded Secret', 'High', 'Info', 'Injection Risk', 'Low', 'Medium', 'Severity']

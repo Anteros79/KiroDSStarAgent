@@ -1,0 +1,4 @@
+# file: C:\DevProjects\KiroDSStarAgent\KiroDSStarAgent\src\security\annotation_injector.py
+# hypothesis_version: 6.148.7
+
+[300, '#', '### Conflicts', '.bash', '.c', '.cfg', '.conf', '.cpp', '.cs', '.go', '.h', '.hpp', '.ini', '.java', '.js', '.jsx', '.kt', '.php', '.py', '.rb', '.rs', '.scala', '.sh', '.swift', '.toml', '.ts', '.tsx', '.yaml', '.yml', '.zsh', '//', 'Already annotated', 'Unknown error', 'cp1252', 'latin-1', 'npm test', 'package.json', 'pyproject.toml', 'pytest.ini', 'r', 'setup.py', 'utf-8', 'w']

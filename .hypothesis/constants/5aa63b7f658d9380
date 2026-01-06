@@ -1,0 +1,4 @@
+# file: C:\DevProjects\KiroDSStarAgent\KiroDSStarAgent\src\handlers\error_handler.py
+# hypothesis_version: 6.148.7
+
+[1000, '_', 'agent_name', 'authentication', 'connection', 'credentials', 'duration_ms', 'execution_time_ms', 'inputs', 'invalid', 'malformed', 'missing', 'network', 'not found', 'output', 'query', 'response', 'timeout', 'tool_calls', 'tool_name']

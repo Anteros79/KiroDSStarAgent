@@ -1,0 +1,4 @@
+# file: C:\DevProjects\KiroDSStarAgent\KiroDSStarAgent\src\handlers\retry_handler.py
+# hypothesis_version: 6.148.7
+
+[1.0, 'T', 'connection', 'internalserver', 'rate limit', 'service unavailable', 'serviceunavailable', 'throttl', 'timeout', 'too many requests']

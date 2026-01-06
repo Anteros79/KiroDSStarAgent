@@ -9,7 +9,7 @@ import time
 import urllib.request
 import urllib.error
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -484,14 +484,16 @@ def generate_techops_xmr_combo_chart(
                     }
                 )
 
-        # Build Individuals chart traces (bar-style like the reference dashboard)
-        bar_colors = [SW_PALETTE["red"] if getattr(p, "signal_state", "none") == "critical" else SW_PALETTE["blue"] for p in s.points]
+        # Build Individuals chart traces (line+markers style for process control chart)
+        point_colors = [SW_PALETTE["red"] if getattr(p, "signal_state", "none") == "critical" else SW_PALETTE["blue"] for p in s.points]
         x_trace: Dict[str, Any] = {
-            "type": "bar",
+            "type": "scatter",
+            "mode": "lines+markers",
             "name": "X",
             "x": t_list,
             "y": values,
-            "marker": {"color": bar_colors, "line": {"width": 1, "color": "#FFFFFF"}},
+            "line": {"color": SW_PALETTE["blue"], "width": 2},
+            "marker": {"size": 8, "color": point_colors, "line": {"width": 1, "color": "#FFFFFF"}},
             "hovertemplate": "<b>%{x}</b><br>Value: %{y}<extra></extra>",
         }
 
@@ -636,7 +638,6 @@ def generate_techops_xmr_combo_chart(
             "layout": {
                 "title": {"text": title, "font": {"size": 16}},
                 "grid": {"rows": 2, "columns": 1, "pattern": "independent"},
-                "barmode": "overlay",
                 "margin": {"l": 70, "r": 20, "t": 50, "b": 60},
                 "paper_bgcolor": "#FFFFFF",
                 "plot_bgcolor": "#FFFFFF",
@@ -644,9 +645,9 @@ def generate_techops_xmr_combo_chart(
                 "dragmode": "zoom",
                 "hovermode": "x unified",
                 "shapes": stage_lines,
-                "xaxis": {"title": "", "showgrid": False, "showticklabels": False},
+                "xaxis": {"title": "", "showgrid": True, "gridcolor": "#E5E7EB", "showticklabels": False},
                 "yaxis": {"title": f"{label} ({unit})", "gridcolor": "#E5E7EB"},
-                "xaxis2": {"title": "", "showgrid": False, "matches": "x", "tickangle": 0},
+                "xaxis2": {"title": "", "showgrid": True, "gridcolor": "#E5E7EB", "matches": "x", "tickangle": 0},
                 "yaxis2": {"title": "Moving Range", "gridcolor": "#E5E7EB"},
                 "meta": {"phases": phase_meta, "summary_level": summary_level},
             },
@@ -831,21 +832,32 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Global state
+# Global state (application-level, not request-specific)
 orchestrator: Optional[OrchestratorAgent] = None
 config: Optional[Config] = None
 techops = None
 
-# In-memory demo identity + investigations (demo scope)
+# Demo identities (static configuration, not request-specific state)
 _demo_identities = [
     {"id": "jmartinez", "name": "J. Martinez", "role": "Station Manager", "station": "DAL"},
     {"id": "techops_phx", "name": "A. Chen", "role": "Tech Ops Analyst", "station": "PHX"},
     {"id": "reliability_hq", "name": "R. Patel", "role": "Reliability Eng", "station": "HOU"},
 ]
-_current_identity_id = "jmartinez"
 
-# investigations: id -> record
-_techops_investigations: Dict[str, Dict[str, Any]] = {}
+# Session-scoped security components (initialized at startup)
+# These replace the global _current_identity_id and _techops_investigations
+from src.security.session_manager import SessionManager
+from src.security.identity_provider import LocalIdentityProvider
+from src.security.rls_engine import RowLevelSecurityEngine
+from src.data.investigation_store import InvestigationStore
+from src.security.session_models import SessionContext
+from src.handlers.stream_handler_factory import StreamHandlerFactory, WebSocketStreamHandler
+
+# Security infrastructure (initialized at startup)
+_identity_provider: Optional[LocalIdentityProvider] = None
+_session_manager: Optional[SessionManager] = None
+_rls_engine: Optional[RowLevelSecurityEngine] = None
+_investigation_store: Optional[InvestigationStore] = None
 
 
 # Request/Response models
@@ -1005,6 +1017,7 @@ class FinalizeInvestigationRequest(BaseModel):
 async def startup_event():
     """Initialize the DS-Star system on startup."""
     global orchestrator, config, techops
+    global _identity_provider, _session_manager, _rls_engine, _investigation_store
     
     try:
         logger.info("Starting DS-Star API server...")
@@ -1012,6 +1025,18 @@ async def startup_event():
         # Load configuration
         config = Config.load()
         logger.info(f"Configuration loaded: model={config.model_id}, region={config.region}")
+        
+        # Initialize security infrastructure (replaces global state)
+        logger.info("Initializing security infrastructure...")
+        _identity_provider = LocalIdentityProvider(_demo_identities)
+        _session_manager = SessionManager(
+            identity_provider=_identity_provider,
+            session_ttl_hours=24,
+            open_access_mode=True  # Default to open access
+        )
+        _rls_engine = RowLevelSecurityEngine(open_access_mode=True)
+        _investigation_store = InvestigationStore(rls_engine=_rls_engine)
+        logger.info("✓ Security infrastructure initialized (open access mode)")
         
         # Initialize data loader
         logger.info("Loading airline operations dataset...")
@@ -1095,6 +1120,94 @@ async def startup_event():
         raise
 
 
+# FastAPI Dependencies for Session Context
+# These replace the global _current_identity_id with request-scoped session management
+
+async def get_session_context(
+    x_session_id: Optional[str] = Header(None, alias="X-Session-ID"),
+) -> SessionContext:
+    """Get or create session context for the current request.
+    
+    This dependency provides request-scoped session context, replacing
+    the global _current_identity_id variable.
+    
+    Args:
+        x_session_id: Optional session ID from X-Session-ID header
+        
+    Returns:
+        SessionContext for the current request
+        
+    Raises:
+        HTTPException: If session manager not initialized or session invalid
+        
+    Requirements: 7.3
+    """
+    if _session_manager is None:
+        raise HTTPException(status_code=503, detail="Session manager not initialized")
+    
+    # If session ID provided, try to get existing session
+    if x_session_id:
+        context = _session_manager.get_session(x_session_id)
+        if context:
+            return context
+        # Invalid/expired session - create new one with default identity
+    
+    # Create new session with default identity
+    default_identity = _demo_identities[0]  # jmartinez
+    context = _session_manager.create_session(
+        user_id=default_identity["id"],
+        identity=default_identity
+    )
+    return context
+
+
+async def get_current_user(
+    session: SessionContext = Depends(get_session_context),
+) -> Dict[str, Any]:
+    """Get current user identity from session context.
+    
+    This dependency extracts user identity from the session context,
+    providing a clean interface for endpoints that need user info.
+    
+    Args:
+        session: Session context (injected by get_session_context)
+        
+    Returns:
+        User identity dictionary
+        
+    Requirements: 7.3
+    """
+    return session.identity
+
+
+def get_investigation_store() -> InvestigationStore:
+    """Get the investigation store instance.
+    
+    Returns:
+        InvestigationStore instance
+        
+    Raises:
+        HTTPException: If investigation store not initialized
+    """
+    if _investigation_store is None:
+        raise HTTPException(status_code=503, detail="Investigation store not initialized")
+    return _investigation_store
+
+
+def get_rls_engine() -> RowLevelSecurityEngine:
+    """Get the RLS engine instance.
+    
+    Returns:
+        RowLevelSecurityEngine instance
+        
+    Raises:
+        HTTPException: If RLS engine not initialized
+    """
+    if _rls_engine is None:
+        raise HTTPException(status_code=503, detail="RLS engine not initialized")
+    return _rls_engine
+
+
 # Health check endpoint
 @app.get("/health")
 async def health_check():
@@ -1164,22 +1277,56 @@ async def get_status():
     )
 
 
-@app.get("/api/me", response_model=DemoIdentity)
-async def get_me():
-    """Return the current demo identity (no-auth)."""
-    identity = next((i for i in _demo_identities if i["id"] == _current_identity_id), _demo_identities[0])
-    return DemoIdentity(**identity)
+class SessionResponse(BaseModel):
+    """Response model including session information."""
+    identity: DemoIdentity
+    session_id: str
 
 
-@app.post("/api/me/select", response_model=DemoIdentity)
-async def select_me(req: SelectIdentityRequest):
-    """Select the current demo identity."""
-    global _current_identity_id
+@app.get("/api/me", response_model=SessionResponse)
+async def get_me(session: SessionContext = Depends(get_session_context)):
+    """Return the current session identity.
+    
+    This endpoint now uses session context instead of global state,
+    ensuring each user sees their own identity.
+    
+    Requirements: 1.4
+    """
+    identity = session.identity
+    return SessionResponse(
+        identity=DemoIdentity(**identity),
+        session_id=session.session_id
+    )
+
+
+@app.post("/api/me/select", response_model=SessionResponse)
+async def select_me(
+    req: SelectIdentityRequest,
+    session: SessionContext = Depends(get_session_context)
+):
+    """Select identity for the current session only.
+    
+    This endpoint updates only the requesting session's identity,
+    not affecting other users' sessions.
+    
+    Requirements: 1.4
+    """
+    if _session_manager is None:
+        raise HTTPException(status_code=503, detail="Session manager not initialized")
+    
     identity = next((i for i in _demo_identities if i["id"] == req.identity_id), None)
     if not identity:
         raise HTTPException(status_code=400, detail="Unknown identity_id")
-    _current_identity_id = identity["id"]
-    return DemoIdentity(**identity)
+    
+    # Update only this session's identity
+    updated_context = _session_manager.update_identity(session.session_id, identity)
+    if not updated_context:
+        raise HTTPException(status_code=400, detail="Failed to update session identity")
+    
+    return SessionResponse(
+        identity=DemoIdentity(**identity),
+        session_id=updated_context.session_id
+    )
 
 
 @app.get("/api/techops/kpis", response_model=list[KPIDefinition])
@@ -1275,8 +1422,20 @@ async def techops_active_signals(station: str = "DAL", summary_level: str = "sta
 
 
 @app.post("/api/techops/investigations", response_model=CreateInvestigationResponse)
-async def techops_create_investigation(req: CreateInvestigationRequest):
-    """Create a new investigation seeded from a KPI click."""
+async def techops_create_investigation(
+    req: CreateInvestigationRequest,
+    session: SessionContext = Depends(get_session_context)
+):
+    """Create a new investigation seeded from a KPI click.
+    
+    This endpoint now uses InvestigationStore with session context,
+    ensuring investigations are associated with the creating user.
+    
+    Requirements: 3.1
+    """
+    if _investigation_store is None:
+        raise HTTPException(status_code=503, detail="Investigation store not initialized")
+    
     store = get_techops_store()
     summary_level = (req.summary_level or "station").lower()
     series_map = (
@@ -1305,8 +1464,8 @@ async def techops_create_investigation(req: CreateInvestigationRequest):
             "Run the relevant comparisons and summarize the key differences."
         )
 
-    # Identity
-    identity = next((i for i in _demo_identities if i["id"] == _current_identity_id), _demo_identities[0])
+    # Use session identity instead of global _current_identity_id
+    identity = session.identity
 
     import uuid
 
@@ -1367,14 +1526,15 @@ async def techops_create_investigation(req: CreateInvestigationRequest):
     # Ensure diagnostics list doesn't contain duplicates by name
     seen = set()
     diagnostics = [d for d in diagnostics if not (d["name"] in seen or seen.add(d["name"]))]
-    record = {
+    
+    # Create investigation data for the store
+    investigation_data = {
         "investigation_id": inv_id,
         "kpi_id": req.kpi_id,
         "station": req.station,
         "window": req.window,
         "summary_level": summary_level,
         "created_by": identity,
-        "created_at": datetime.utcnow().isoformat(),
         "status": "open",
         "prompt_mode": prompt_mode,
         "prompt": prompt,
@@ -1383,42 +1543,171 @@ async def techops_create_investigation(req: CreateInvestigationRequest):
         "diagnostics": diagnostics,
         "telemetry": telemetry,
     }
-    _techops_investigations[inv_id] = record
+    
+    # Use InvestigationStore instead of global dictionary
+    record = _investigation_store.create(
+        data=investigation_data,
+        context=session,
+        investigation_id=inv_id
+    )
+    
     return CreateInvestigationResponse(investigation_id=inv_id, prompt_mode=prompt_mode, prompt=prompt)
 
 
 @app.get("/api/techops/investigations", response_model=list[InvestigationRecord])
-async def techops_list_investigations(station: Optional[str] = None):
+async def techops_list_investigations(
+    station: Optional[str] = None,
+    session: SessionContext = Depends(get_session_context)
+):
+    """List investigations filtered by session access.
+    
+    This endpoint now uses InvestigationStore with RLS filtering,
+    returning only investigations the user has access to.
+    
+    Requirements: 3.2
+    """
+    if _investigation_store is None:
+        raise HTTPException(status_code=503, detail="Investigation store not initialized")
+    
+    # Use InvestigationStore with RLS filtering
+    investigations = _investigation_store.list(context=session, station=station)
+    
     out = []
-    for inv in _techops_investigations.values():
-        if station and inv["station"] != station:
-            continue
-        out.append(InvestigationRecord(**inv))
+    for inv in investigations:
+        # Map store record to InvestigationRecord
+        out.append(InvestigationRecord(
+            investigation_id=inv.get("investigation_id") or inv.get("id"),
+            kpi_id=inv.get("kpi_id", ""),
+            station=inv.get("station", ""),
+            window=inv.get("window", ""),
+            summary_level=inv.get("summary_level", "station"),
+            created_by=DemoIdentity(**inv["created_by"]) if isinstance(inv.get("created_by"), dict) else DemoIdentity(
+                id=inv.get("created_by", "unknown"),
+                name="Unknown",
+                role="Unknown",
+                station=inv.get("station", "")
+            ),
+            created_at=inv.get("created_at", datetime.utcnow().isoformat()),
+            status=inv.get("status", "open"),
+            prompt_mode=inv.get("prompt_mode", "cause"),
+            prompt=inv.get("prompt", ""),
+            selected_point_t=inv.get("selected_point_t"),
+            final_root_cause=inv.get("final_root_cause"),
+            final_actions=inv.get("final_actions", []),
+            final_notes=inv.get("final_notes"),
+            final_evidence=inv.get("final_evidence", []),
+            steps=inv.get("steps", []),
+            diagnostics=inv.get("diagnostics", []),
+            telemetry=inv.get("telemetry"),
+        ))
+    
     # newest first
     out.sort(key=lambda r: r.created_at, reverse=True)
     return out
 
 
 @app.get("/api/techops/investigations/{investigation_id}", response_model=InvestigationRecord)
-async def techops_get_investigation(investigation_id: str):
-    inv = _techops_investigations.get(investigation_id)
+async def techops_get_investigation(
+    investigation_id: str,
+    session: SessionContext = Depends(get_session_context)
+):
+    """Get investigation with access check.
+    
+    This endpoint now uses InvestigationStore with RLS,
+    returning 403 if user doesn't have access.
+    
+    Requirements: 3.2, 3.3
+    """
+    if _investigation_store is None:
+        raise HTTPException(status_code=503, detail="Investigation store not initialized")
+    
+    inv = _investigation_store.get(investigation_id, context=session)
     if not inv:
+        # Could be not found or access denied - return 404 for security
         raise HTTPException(status_code=404, detail="Not found")
-    return InvestigationRecord(**inv)
+    
+    return InvestigationRecord(
+        investigation_id=inv.get("investigation_id") or inv.get("id"),
+        kpi_id=inv.get("kpi_id", ""),
+        station=inv.get("station", ""),
+        window=inv.get("window", ""),
+        summary_level=inv.get("summary_level", "station"),
+        created_by=DemoIdentity(**inv["created_by"]) if isinstance(inv.get("created_by"), dict) else DemoIdentity(
+            id=inv.get("created_by", "unknown"),
+            name="Unknown",
+            role="Unknown",
+            station=inv.get("station", "")
+        ),
+        created_at=inv.get("created_at", datetime.utcnow().isoformat()),
+        status=inv.get("status", "open"),
+        prompt_mode=inv.get("prompt_mode", "cause"),
+        prompt=inv.get("prompt", ""),
+        selected_point_t=inv.get("selected_point_t"),
+        final_root_cause=inv.get("final_root_cause"),
+        final_actions=inv.get("final_actions", []),
+        final_notes=inv.get("final_notes"),
+        final_evidence=inv.get("final_evidence", []),
+        steps=inv.get("steps", []),
+        diagnostics=inv.get("diagnostics", []),
+        telemetry=inv.get("telemetry"),
+    )
 
 
 @app.post("/api/techops/investigations/{investigation_id}/finalize", response_model=InvestigationRecord)
-async def techops_finalize_investigation(investigation_id: str, req: FinalizeInvestigationRequest):
-    inv = _techops_investigations.get(investigation_id)
+async def techops_finalize_investigation(
+    investigation_id: str,
+    req: FinalizeInvestigationRequest,
+    session: SessionContext = Depends(get_session_context)
+):
+    """Finalize investigation with access check.
+    
+    This endpoint now uses InvestigationStore with RLS,
+    returning 403 if user doesn't have access.
+    
+    Requirements: 3.3, 3.4
+    """
+    if _investigation_store is None:
+        raise HTTPException(status_code=503, detail="Investigation store not initialized")
+    
+    # Prepare updates
+    updates = {
+        "final_root_cause": req.final_root_cause,
+        "final_actions": req.final_actions,
+        "final_notes": req.final_notes,
+        "final_evidence": [e.model_dump() for e in req.evidence] if req.evidence else [],
+        "status": "finalized",
+    }
+    
+    # Update through store with access check
+    inv = _investigation_store.update(investigation_id, updates, context=session)
     if not inv:
         raise HTTPException(status_code=404, detail="Not found")
-    inv["final_root_cause"] = req.final_root_cause
-    inv["final_actions"] = req.final_actions
-    inv["final_notes"] = req.final_notes
-    inv["final_evidence"] = [e.model_dump() for e in req.evidence] if req.evidence else []
-    inv["status"] = "finalized"
-    _techops_investigations[investigation_id] = inv
-    return InvestigationRecord(**inv)
+    
+    return InvestigationRecord(
+        investigation_id=inv.get("investigation_id") or inv.get("id"),
+        kpi_id=inv.get("kpi_id", ""),
+        station=inv.get("station", ""),
+        window=inv.get("window", ""),
+        summary_level=inv.get("summary_level", "station"),
+        created_by=DemoIdentity(**inv["created_by"]) if isinstance(inv.get("created_by"), dict) else DemoIdentity(
+            id=inv.get("created_by", "unknown"),
+            name="Unknown",
+            role="Unknown",
+            station=inv.get("station", "")
+        ),
+        created_at=inv.get("created_at", datetime.utcnow().isoformat()),
+        status=inv.get("status", "finalized"),
+        prompt_mode=inv.get("prompt_mode", "cause"),
+        prompt=inv.get("prompt", ""),
+        selected_point_t=inv.get("selected_point_t"),
+        final_root_cause=inv.get("final_root_cause"),
+        final_actions=inv.get("final_actions", []),
+        final_notes=inv.get("final_notes"),
+        final_evidence=inv.get("final_evidence", []),
+        steps=inv.get("steps", []),
+        diagnostics=inv.get("diagnostics", []),
+        telemetry=inv.get("telemetry"),
+    )
 
 
 # Query endpoint (REST)
@@ -1456,7 +1745,13 @@ async def process_query(request: QueryRequest):
 # WebSocket endpoint for streaming
 @app.websocket("/ws/query")
 async def websocket_query(websocket: WebSocket):
-    """Process queries with real-time streaming via WebSocket."""
+    """Process queries with real-time streaming via WebSocket.
+    
+    This endpoint now uses request-scoped stream handlers and session context,
+    ensuring each WebSocket connection has its own isolated handler.
+    
+    Requirements: 1.6, 2.1, 2.2, 2.3
+    """
     await websocket.accept()
     
     if orchestrator is None:
@@ -1468,11 +1763,41 @@ async def websocket_query(websocket: WebSocket):
         await websocket.close()
         return
     
+    # Create session context for this WebSocket connection
+    if _session_manager is None:
+        await websocket.send_json({
+            "type": "error",
+            "data": {"message": "Session manager not initialized"},
+            "timestamp": datetime.utcnow().isoformat()
+        })
+        await websocket.close()
+        return
+    
+    # Create a new session for this WebSocket connection
+    default_identity = _demo_identities[0]
+    session_context = _session_manager.create_session(
+        user_id=default_identity["id"],
+        identity=default_identity
+    )
+    
+    # Create request-scoped stream handler using the factory
+    ws_stream_handler = StreamHandlerFactory.create_websocket_handler(
+        websocket=websocket,
+        session_id=session_context.session_id
+    )
+    
     try:
         while True:
             # Receive query from client
             data = await websocket.receive_json()
             query = data.get("query", "")
+            
+            # Check for session ID in message to update session
+            client_session_id = data.get("session_id")
+            if client_session_id:
+                existing_session = _session_manager.get_session(client_session_id)
+                if existing_session:
+                    session_context = existing_session
             
             if not query:
                 await websocket.send_json({
@@ -1482,79 +1807,36 @@ async def websocket_query(websocket: WebSocket):
                 })
                 continue
             
-            logger.info(f"WebSocket query: {query}")
+            logger.info(f"WebSocket query (session={session_context.session_id}): {query}")
             
-            # Send start event
+            # Send start event with session info
             await websocket.send_json({
                 "type": "query_start",
-                "data": {"query": query},
+                "data": {
+                    "query": query,
+                    "session_id": session_context.session_id
+                },
                 "timestamp": datetime.utcnow().isoformat()
             })
             
-            # Create a custom stream handler that sends events via WebSocket
-            class WebSocketStreamHandler(InvestigationStreamHandler):
-                def __init__(self, ws: WebSocket):
-                    super().__init__(verbose=True)
-                    self.ws = ws
-                
-                async def send_event(self, event_type: str, data: Dict[str, Any]):
-                    await self.ws.send_json({
-                        "type": event_type,
-                        "data": data,
-                        "timestamp": datetime.utcnow().isoformat()
-                    })
-                
-                def on_agent_start(self, agent_name: str, query: str):
-                    super().on_agent_start(agent_name, query)
-                    asyncio.create_task(self.send_event("agent_start", {
-                        "agent": agent_name,
-                        "query": query
-                    }))
-                
-                def on_routing_decision(self, specialist: str, reasoning: str):
-                    super().on_routing_decision(specialist, reasoning)
-                    asyncio.create_task(self.send_event("routing", {
-                        "specialist": specialist,
-                        "reasoning": reasoning
-                    }))
-                
-                def on_tool_start(self, tool_name: str, inputs: Dict):
-                    super().on_tool_start(tool_name, inputs)
-                    asyncio.create_task(self.send_event("tool_start", {
-                        "tool": tool_name,
-                        "inputs": inputs
-                    }))
-                
-                def on_tool_end(self, tool_name: str, result: Any):
-                    super().on_tool_end(tool_name, result)
-                    asyncio.create_task(self.send_event("tool_end", {
-                        "tool": tool_name,
-                        "result": str(result)[:500]  # Truncate long results
-                    }))
-                
-                def on_agent_end(self, agent_name: str, response: str):
-                    super().on_agent_end(agent_name, response)
-                    asyncio.create_task(self.send_event("agent_end", {
-                        "agent": agent_name,
-                        "response": response
-                    }))
-            
-            # Process query with WebSocket streaming
-            ws_handler = WebSocketStreamHandler(websocket)
-            
-            # Temporarily replace the orchestrator's stream handler
-            original_handler = orchestrator.stream_handler
-            orchestrator.stream_handler = ws_handler
-            
             try:
-                # Add context
+                # Add context including session info
                 context = {
                     "output_dir": config.output_dir,
-                    "data_path": config.data_path
+                    "data_path": config.data_path,
+                    "session_id": session_context.session_id,
+                    "user_id": session_context.user_id,
                 }
                 
-                # Process through orchestrator
-                response = await asyncio.to_thread(orchestrator.process, query, context)
+                # Process through orchestrator with request-scoped handler
+                # Note: We pass the stream handler to process() if the orchestrator supports it
+                # For now, we use the existing pattern but with isolated handler
+                response = await asyncio.to_thread(
+                    orchestrator.process, 
+                    query, 
+                    context,
+                    ws_stream_handler  # Pass request-scoped handler
+                )
                 
                 # Send final response
                 await websocket.send_json({
@@ -1563,19 +1845,27 @@ async def websocket_query(websocket: WebSocket):
                         "response": response.synthesized_response,
                         "routing": response.routing,
                         "execution_time_ms": response.total_time_ms,
-                        "charts": [chart.__dict__ if hasattr(chart, '__dict__') else chart for chart in response.charts]
+                        "charts": [chart.__dict__ if hasattr(chart, '__dict__') else chart for chart in response.charts],
+                        "session_id": session_context.session_id
                     },
                     "timestamp": datetime.utcnow().isoformat()
                 })
                 
-            finally:
-                # Restore original handler
-                orchestrator.stream_handler = original_handler
+            except Exception as e:
+                logger.error(f"Query processing error: {e}", exc_info=True)
+                await websocket.send_json({
+                    "type": "error",
+                    "data": {"message": str(e)},
+                    "timestamp": datetime.utcnow().isoformat()
+                })
             
     except WebSocketDisconnect:
-        logger.info("WebSocket client disconnected")
+        logger.info(f"WebSocket client disconnected (session={session_context.session_id})")
+        # Clean up the stream handler
+        ws_stream_handler.close()
     except Exception as e:
         logger.error(f"WebSocket error: {e}", exc_info=True)
+        ws_stream_handler.close()
         try:
             await websocket.send_json({
                 "type": "error",
@@ -1589,7 +1879,13 @@ async def websocket_query(websocket: WebSocket):
 # WebSocket endpoint for workbench streaming analysis
 @app.websocket("/ws/stream")
 async def websocket_stream(websocket: WebSocket):
-    """Stream analysis workflow events via WebSocket for the workbench UI."""
+    """Stream analysis workflow events via WebSocket for the workbench UI.
+    
+    This endpoint now uses session context and InvestigationStore,
+    ensuring proper session isolation and access control.
+    
+    Requirements: 1.6, 2.1, 2.2, 2.3
+    """
     await websocket.accept()
     
     if orchestrator is None:
@@ -1600,11 +1896,40 @@ async def websocket_stream(websocket: WebSocket):
         await websocket.close()
         return
     
+    # Create session context for this WebSocket connection
+    if _session_manager is None or _investigation_store is None:
+        await websocket.send_json({
+            "type": "error",
+            "data": {"message": "Security infrastructure not initialized"},
+        })
+        await websocket.close()
+        return
+    
+    # Create a new session for this WebSocket connection
+    default_identity = _demo_identities[0]
+    session_context = _session_manager.create_session(
+        user_id=default_identity["id"],
+        identity=default_identity
+    )
+    
+    # Create request-scoped stream handler
+    ws_stream_handler = StreamHandlerFactory.create_websocket_handler(
+        websocket=websocket,
+        session_id=session_context.session_id
+    )
+    
     try:
         while True:
             # Receive message from client
             data = await websocket.receive_json()
             event_type = data.get("type", "")
+            
+            # Check for session ID in message to update session
+            client_session_id = data.get("session_id")
+            if client_session_id:
+                existing_session = _session_manager.get_session(client_session_id)
+                if existing_session:
+                    session_context = existing_session
             
             if event_type == "start_analysis":
                 research_goal = data.get("data", {}).get("research_goal", "")
@@ -1639,6 +1964,7 @@ async def websocket_stream(websocket: WebSocket):
                     "data": {
                         "analysis_id": analysis_id,
                         "research_goal": research_goal,
+                        "session_id": session_context.session_id,
                     },
                 })
                 
@@ -1652,21 +1978,21 @@ async def websocket_stream(websocket: WebSocket):
                     },
                 })
 
-                # Persist step record (demo: in-memory) if this is a Tech Ops investigation
-                if inv_id and inv_id in _techops_investigations:
-                    inv = _techops_investigations[inv_id]
-                    inv_steps = inv.get("steps", [])
-                    inv_steps.append(
-                        {
-                            "step_id": step_id,
-                            "step_number": 1,
-                            "query": research_goal,
-                            "iterations": [],
-                            "created_at": datetime.utcnow().isoformat(),
-                        }
-                    )
-                    inv["steps"] = inv_steps
-                    _techops_investigations[inv_id] = inv
+                # Persist step record using InvestigationStore if this is a Tech Ops investigation
+                if inv_id and _investigation_store:
+                    inv = _investigation_store.get(inv_id, context=session_context)
+                    if inv:
+                        inv_steps = inv.get("steps", [])
+                        inv_steps.append(
+                            {
+                                "step_id": step_id,
+                                "step_number": 1,
+                                "query": research_goal,
+                                "iterations": [],
+                                "created_at": datetime.utcnow().isoformat(),
+                            }
+                        )
+                        _investigation_store.update(inv_id, {"steps": inv_steps}, context=session_context)
 
                 # Build a test plan (unique "tests") and run until answered or max_iterations.
                 executed_tests: set[str] = set()
@@ -1858,27 +2184,27 @@ async def websocket_stream(websocket: WebSocket):
                                 },
                             })
 
-                        # Persist iteration record (demo: in-memory)
-                        if inv_id and inv_id in _techops_investigations:
-                            inv = _techops_investigations[inv_id]
-                            inv_steps = inv.get("steps", [])
-                            for st in inv_steps:
-                                if st.get("step_id") == step_id:
-                                    st.setdefault("iterations", []).append(
-                                        {
-                                            "iteration_id": iteration_id,
-                                            "iteration_number": i,
-                                            "generated_code": code,
-                                            "query": iteration_query,
-                                            "response": response.synthesized_response or "",
-                                            "chart": chart_data,
-                                            "include_in_final": True,
-                                            "created_at": datetime.utcnow().isoformat(),
-                                        }
-                                    )
-                                    break
-                            inv["steps"] = inv_steps
-                            _techops_investigations[inv_id] = inv
+                        # Persist iteration record using InvestigationStore
+                        if inv_id and _investigation_store:
+                            inv = _investigation_store.get(inv_id, context=session_context)
+                            if inv:
+                                inv_steps = inv.get("steps", [])
+                                for st in inv_steps:
+                                    if st.get("step_id") == step_id:
+                                        st.setdefault("iterations", []).append(
+                                            {
+                                                "iteration_id": iteration_id,
+                                                "iteration_number": i,
+                                                "generated_code": code,
+                                                "query": iteration_query,
+                                                "response": response.synthesized_response or "",
+                                                "chart": chart_data,
+                                                "include_in_final": True,
+                                                "created_at": datetime.utcnow().isoformat(),
+                                            }
+                                        )
+                                        break
+                                _investigation_store.update(inv_id, {"steps": inv_steps}, context=session_context)
 
                         await websocket.send_json({
                             "type": "verification_complete",
@@ -2027,9 +2353,11 @@ async def websocket_stream(websocket: WebSocket):
                     })
             
     except WebSocketDisconnect:
-        logger.info("Workbench WebSocket client disconnected")
+        logger.info(f"Workbench WebSocket client disconnected (session={session_context.session_id})")
+        ws_stream_handler.close()
     except Exception as e:
         logger.error(f"Workbench WebSocket error: {e}", exc_info=True)
+        ws_stream_handler.close()
         try:
             await websocket.send_json({
                 "type": "error",

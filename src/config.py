@@ -38,6 +38,12 @@ class Config:
         data_path: Path to airline operations dataset
         retry_attempts: Maximum retry attempts for API failures
         retry_delay_base: Base delay in seconds for exponential backoff
+        
+        Security settings:
+        open_access_mode: Enable open access mode (default: True, bypasses RLS)
+        session_ttl_hours: Session time-to-live in hours (default: 24)
+        identity_provider: Identity provider type ("local", "azure_ad", "aws_iam")
+        enable_audit_logging: Enable audit logging for access decisions (default: True)
     """
     
     model_provider: str = "lemonade"  # "lemonade" (default), "anthropic", "openai", "ollama", or "bedrock"
@@ -54,6 +60,12 @@ class Config:
     data_path: str = "./data/airline_operations.csv"
     retry_attempts: int = 3
     retry_delay_base: float = 1.0
+    
+    # Security settings (Requirements 6.1, 6.4)
+    open_access_mode: bool = True  # Default: open access, bypasses RLS
+    session_ttl_hours: int = 24  # Session time-to-live in hours
+    identity_provider: str = "local"  # "local", "azure_ad", "aws_iam"
+    enable_audit_logging: bool = True  # Log all access decisions
     
     def _apply_provider_default_model(self) -> None:
         """Apply provider-specific default model if model_id hasn't been explicitly set.
@@ -97,6 +109,12 @@ class Config:
             DS_STAR_DATA_PATH: Data file path (default: ./data/airline_operations.csv)
             DS_STAR_RETRY_ATTEMPTS: Retry attempts (default: 3)
             DS_STAR_RETRY_DELAY_BASE: Base retry delay (default: 1.0)
+            
+            Security settings:
+            DS_STAR_OPEN_ACCESS_MODE: Enable open access mode (default: True)
+            DS_STAR_SESSION_TTL_HOURS: Session TTL in hours (default: 24)
+            DS_STAR_IDENTITY_PROVIDER: Identity provider (default: local)
+            DS_STAR_ENABLE_AUDIT_LOGGING: Enable audit logging (default: True)
         
         Returns:
             Config instance with values from environment variables
@@ -174,6 +192,24 @@ class Config:
                 logger.warning(
                     f"Invalid DS_STAR_RETRY_DELAY_BASE value '{retry_delay_base}', using default {config.retry_delay_base}"
                 )
+        
+        # Security settings (Requirements 6.1, 6.4)
+        if open_access_mode := os.getenv("DS_STAR_OPEN_ACCESS_MODE"):
+            config.open_access_mode = open_access_mode.lower() in ("true", "1", "yes")
+        
+        if session_ttl_hours := os.getenv("DS_STAR_SESSION_TTL_HOURS"):
+            try:
+                config.session_ttl_hours = int(session_ttl_hours)
+            except ValueError:
+                logger.warning(
+                    f"Invalid DS_STAR_SESSION_TTL_HOURS value '{session_ttl_hours}', using default {config.session_ttl_hours}"
+                )
+        
+        if identity_provider := os.getenv("DS_STAR_IDENTITY_PROVIDER"):
+            config.identity_provider = identity_provider.lower()
+        
+        if enable_audit_logging := os.getenv("DS_STAR_ENABLE_AUDIT_LOGGING"):
+            config.enable_audit_logging = enable_audit_logging.lower() in ("true", "1", "yes")
         
         return config
     
@@ -276,6 +312,41 @@ class Config:
                         f"Invalid retry_delay_base value in config file, using default {config.retry_delay_base}"
                     )
             
+            # Security settings (Requirements 6.1, 6.4)
+            if "open_access_mode" in data:
+                config.open_access_mode = bool(data["open_access_mode"])
+            
+            if "session_ttl_hours" in data:
+                try:
+                    config.session_ttl_hours = int(data["session_ttl_hours"])
+                except (ValueError, TypeError):
+                    logger.warning(
+                        f"Invalid session_ttl_hours value in config file, using default {config.session_ttl_hours}"
+                    )
+            
+            if "identity_provider" in data:
+                config.identity_provider = str(data["identity_provider"]).lower()
+            
+            if "enable_audit_logging" in data:
+                config.enable_audit_logging = bool(data["enable_audit_logging"])
+            
+            # Support nested security section in config file
+            if "security" in data and isinstance(data["security"], dict):
+                security = data["security"]
+                if "open_access_mode" in security:
+                    config.open_access_mode = bool(security["open_access_mode"])
+                if "session_ttl_hours" in security:
+                    try:
+                        config.session_ttl_hours = int(security["session_ttl_hours"])
+                    except (ValueError, TypeError):
+                        logger.warning(
+                            f"Invalid security.session_ttl_hours value in config file, using default {config.session_ttl_hours}"
+                        )
+                if "identity_provider" in security:
+                    config.identity_provider = str(security["identity_provider"]).lower()
+                if "enable_audit_logging" in security:
+                    config.enable_audit_logging = bool(security["enable_audit_logging"])
+            
             return config
             
         except json.JSONDecodeError as e:
@@ -349,6 +420,16 @@ class Config:
             config.retry_attempts = env_config.retry_attempts
         if env_config.retry_delay_base != default_config.retry_delay_base:
             config.retry_delay_base = env_config.retry_delay_base
+        
+        # Security settings (Requirements 6.1, 6.4)
+        if env_config.open_access_mode != default_config.open_access_mode:
+            config.open_access_mode = env_config.open_access_mode
+        if env_config.session_ttl_hours != default_config.session_ttl_hours:
+            config.session_ttl_hours = env_config.session_ttl_hours
+        if env_config.identity_provider != default_config.identity_provider:
+            config.identity_provider = env_config.identity_provider
+        if env_config.enable_audit_logging != default_config.enable_audit_logging:
+            config.enable_audit_logging = env_config.enable_audit_logging
 
         # Apply provider-specific default model if needed
         config._apply_provider_default_model()
@@ -389,5 +470,15 @@ class Config:
         
         if self.retry_delay_base <= 0:
             raise ValueError(f"retry_delay_base must be positive, got {self.retry_delay_base}")
+        
+        # Validate security settings (Requirements 6.1, 6.4)
+        valid_identity_providers = {"local", "azure_ad", "aws_iam"}
+        if self.identity_provider not in valid_identity_providers:
+            raise ValueError(
+                f"identity_provider must be one of {valid_identity_providers}, got '{self.identity_provider}'"
+            )
+        
+        if self.session_ttl_hours <= 0:
+            raise ValueError(f"session_ttl_hours must be positive, got {self.session_ttl_hours}")
         
         return True

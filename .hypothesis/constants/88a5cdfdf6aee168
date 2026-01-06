@@ -1,0 +1,4 @@
+# file: C:\DevProjects\KiroDSStarAgent\KiroDSStarAgent\src\security\rls_engine.py
+# hypothesis_version: 6.148.7
+
+['data_scope', 'id', 'items_requested', 'no_policy_defined', 'open_access_mode', 'policy_check', 'policy_check_failed', 'policy_check_passed', 'read', 'region']

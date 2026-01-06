@@ -1,0 +1,4 @@
+# file: C:\DevProjects\KiroDSStarAgent\KiroDSStarAgent\src\security\session_models.py
+# hypothesis_version: 6.148.7
+
+['SessionContext', 'allowed', 'aws_iam', 'azure_ad', 'company', 'denied', 'local', 'open_access', 'region', 'station']

@@ -1,6 +1,6 @@
 # DS-STAR Workbench Frontend
 
-A modern React-based UI for the DS-Star multi-agent data science system. Features an iterative workflow with real-time streaming, code display, interactive visualizations, and verification steps.
+A modern React-based UI for the DS-Star multi-agent data science system. Features an iterative workflow with real-time streaming, code display, interactive visualizations, verification steps, and guided query suggestions.
 
 ## Features
 
@@ -9,6 +9,9 @@ A modern React-based UI for the DS-Star multi-agent data science system. Feature
 - **Interactive Charts**: Plotly.js visualizations with zoom, pan, and export
 - **Verifier Assessment**: Approve or decline analysis results with feedback
 - **Real-time Updates**: WebSocket-based streaming for live progress
+- **Things to Consider**: Guided query suggestions with field advice and industry factors
+- **Responsive Design**: Mobile-optimized interface with adaptive layouts
+- **Tech Ops Dashboard**: KPI visualization with Wheeler XmR control charts
 
 ## Tech Stack
 
@@ -57,11 +60,19 @@ frontend/
 ├── src/
 │   ├── components/
 │   │   ├── content/       # CodeDisplay, ChartDisplay, etc.
+│   │   ├── investigation/ # InvestigationWorkbench
 │   │   ├── layout/        # AppShell, Header
 │   │   ├── sidebar/       # ActiveDatasetPanel, ResearchGoalPanel
-│   │   └── timeline/      # AnalysisTimeline, StepCard, IterationCard
-│   ├── hooks/             # useAnalysis, useWebSocket
-│   ├── services/          # API and WebSocket services
+│   │   ├── timeline/      # AnalysisTimeline, StepCard, IterationCard
+│   │   ├── ThingsToConsiderSection.tsx  # Guided query suggestions
+│   │   ├── AdviceFromFieldTile.tsx      # Field advice suggestions
+│   │   ├── IndustryFactorsTile.tsx      # Industry factor suggestions
+│   │   └── SuggestionChip.tsx           # Clickable suggestion chips
+│   ├── config/
+│   │   └── industryFactorsConfig.ts     # Industry factors configuration
+│   ├── hooks/             # useAnalysis, useWebSocket, useInvestigation
+│   ├── services/          # API, WebSocket, and field advice services
+│   ├── techops/           # Tech Ops dashboard components and pages
 │   ├── types/             # TypeScript definitions
 │   ├── App.tsx
 │   └── index.css          # Tailwind + custom styles

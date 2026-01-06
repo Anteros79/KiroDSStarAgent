@@ -1,0 +1,4 @@
+# file: C:\DevProjects\KiroDSStarAgent\KiroDSStarAgent\src\handlers\stream_handler_factory.py
+# hypothesis_version: 6.148.7
+
+[997, 1000, '...', '_session_id', '_timestamp', 'agent_end', 'agent_name', 'agent_start', 'closed', 'context', 'error', 'error_message', 'error_type', 'inputs', 'open', 'query', 'reasoning', 'response', 'result', 'routing_decision', 'specialist', 'timestamp', 'tool_end', 'tool_name', 'tool_start', 'type']

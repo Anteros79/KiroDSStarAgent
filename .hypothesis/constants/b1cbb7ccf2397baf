@@ -1,0 +1,4 @@
+# file: C:\DevProjects\KiroDSStarAgent\KiroDSStarAgent\src\security\report_generator.py
+# hypothesis_version: 6.148.7
+
+['## Critical Findings', '## Executive Summary', '## Remediation Plan', '### Key Metrics', '#### Injection Risks', '---', '...', '1 hour', '1-2 hours', '15 minutes', '2-4 hours', '30 minutes', '4-8 hours', 'CRITICAL', 'HIGH', 'LOW', 'MEDIUM', 'MINIMAL', 'SECURITY_AUDIT.md', '\\|', 'utf-8', '|', '| Category | Count |', '|----------|-------|']

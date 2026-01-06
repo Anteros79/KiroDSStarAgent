@@ -1,0 +1,4 @@
+# file: C:\DevProjects\KiroDSStarAgent\KiroDSStarAgent\src\security\__init__.py
+# hypothesis_version: 6.148.7
+
+['APIAuditor', 'APIEndpoint', 'APIFinding', 'AUTHZ_INDICATORS', 'AWSIAMProvider', 'AccessDecision', 'AnnotationInjector', 'AnnotationReport', 'AnnotationResult', 'AuditLogEntry', 'AuditReport', 'AzureADProvider', 'COMMENT_PREFIXES', 'CVERecord', 'DataScope', 'Dependency', 'DependencyAnalyzer', 'DependencyFinding', 'ENDPOINT_PATTERNS', 'EXCLUDE_PATTERNS', 'FindingCategory', 'OWASP_MAPPING', 'PermissionPolicy', 'ProviderType', 'REMEDIATION_EFFORT', 'ReportGenerator', 'SECRET_PATTERNS', 'SECRET_SEVERITY', 'SECURITY_ANNOTATION', 'SecretFinding', 'SecretScanner', 'SecurityConfig', 'SecurityFinding', 'SecurityScanner', 'SessionContext', 'SessionManager', 'Severity', 'UserAttributes', 'cli_main']

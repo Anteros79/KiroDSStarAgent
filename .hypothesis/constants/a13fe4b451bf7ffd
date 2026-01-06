@@ -1,0 +1,4 @@
+# file: C:\DevProjects\KiroDSStarAgent\KiroDSStarAgent\src\config.py
+# hypothesis_version: 6.148.7
+
+[0.0, 0.3, 1.0, 4096, './output', '.env', '.json', '.yaml', '.yml', '1', 'ANTHROPIC_API_KEY', 'AWS_REGION', 'Config', 'DS_STAR_DATA_PATH', 'DS_STAR_MAX_TOKENS', 'DS_STAR_MODEL_ID', 'DS_STAR_OLLAMA_HOST', 'DS_STAR_OUTPUT_DIR', 'DS_STAR_REGION', 'DS_STAR_TEMPERATURE', 'DS_STAR_VERBOSE', 'OPENAI_API_KEY', 'anthropic', 'anthropic_api_key', 'aws_iam', 'azure_ad', 'bedrock', 'data_path', 'enable_audit_logging', 'gpt-4o', 'identity_provider', 'lemonade', 'local', 'max_tokens', 'model_id', 'model_provider', 'ollama', 'ollama_host', 'open_access_mode', 'openai', 'openai_api_key', 'output_dir', 'qwen3:30b', 'r', 'region', 'retry_attempts', 'retry_delay_base', 'security', 'session_ttl_hours', 'temperature', 'true', 'us-west-2', 'verbose', 'yes']

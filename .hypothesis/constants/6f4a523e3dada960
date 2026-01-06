@@ -1,0 +1,4 @@
+# file: C:\DevProjects\KiroDSStarAgent\KiroDSStarAgent\src\security\identity_provider.py
+# hypothesis_version: 6.148.7
+
+['*', 'AWS_REGION', 'AWS_ROLE_ARN', 'AZURE_AD_CLIENT_ID', 'AZURE_AD_TENANT_ID', 'company', 'email', 'id', 'name', 'region', 'role', 'scope', 'station', 'user']

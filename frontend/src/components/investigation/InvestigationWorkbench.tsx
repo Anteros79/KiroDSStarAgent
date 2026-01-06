@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react'
 import { useInvestigation } from '../../hooks/useInvestigation'
 import { StepSlider } from './StepSlider'
 import { NotesPanel } from './NotesPanel'
@@ -26,13 +26,17 @@ interface InvestigationWorkbenchProps {
   }
 }
 
-export function InvestigationWorkbench({ 
+export interface InvestigationWorkbenchRef {
+  executeQuery: (query: string) => void
+}
+
+export const InvestigationWorkbench = forwardRef<InvestigationWorkbenchRef, InvestigationWorkbenchProps>(({ 
   measureName = 'On-Time Performance', 
   datasetName = 'airline_operations.csv',
   initialQuery,
   autoRunInitialQuery = false,
   wsContext,
-}: InvestigationWorkbenchProps) {
+}, ref) => {
   const measureId = wsContext?.kpi_id || measureName.toLowerCase().replace(/[\s-]/g, '_')
   const measureConfig = getMeasureConfig(measureId)
   const station = wsContext?.station || 'DAL'
@@ -56,6 +60,17 @@ export function InvestigationWorkbench({
   const [query, setQuery] = useState('')
   const [showAnalysisPanel, setShowAnalysisPanel] = useState(true)
   const autoRanRef = useRef(false)
+
+  // Expose methods to parent component
+  useImperativeHandle(ref, () => ({
+    executeQuery: (externalQuery: string) => {
+      setQuery(externalQuery)
+      if (externalQuery.trim() && !isProcessing) {
+        runAnalysis(externalQuery.trim(), wsContext)
+        setQuery('')
+      }
+    }
+  }), [isProcessing, runAnalysis, wsContext])
 
   // Start investigation on mount
   useEffect(() => {
@@ -433,4 +448,6 @@ export function InvestigationWorkbench({
       </aside>
     </div>
   )
-}
+})
+
+InvestigationWorkbench.displayName = 'InvestigationWorkbench'

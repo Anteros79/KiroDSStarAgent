@@ -1,0 +1,4 @@
+# file: C:\DevProjects\KiroDSStarAgent\KiroDSStarAgent\src\data\investigation_store.py
+# hypothesis_version: 6.148.7
+
+['created_at', 'created_by', 'id', 'investigation', 'region', 'session_id', 'station', 'updated_at']

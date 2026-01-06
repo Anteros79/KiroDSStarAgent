@@ -1,0 +1,4 @@
+# file: C:\DevProjects\KiroDSStarAgent\KiroDSStarAgent\src\security\secret_scanner.py
+# hypothesis_version: 6.148.7
+
+[b'\x00', 8192, '*', '****', '\\.bin$', '\\.dll$', '\\.egg-info[/\\\\]', '\\.env\\.example$', '\\.eot$', '\\.exe$', '\\.gif$', '\\.git[/\\\\]', '\\.gz$', '\\.hypothesis[/\\\\]', '\\.ico$', '\\.jpeg$', '\\.jpg$', '\\.lock$', '\\.md$', '\\.pdf$', '\\.png$', '\\.pyc$', '\\.pyo$', '\\.pytest_cache[/\\\\]', '\\.rar$', '\\.so$', '\\.svg$', '\\.tar$', '\\.ttf$', '\\.venv[/\\\\]', '\\.woff$', '\\.woff2$', '\\.zip$', '__pycache__[/\\\\]', 'api_key', 'aws_credentials', 'build[/\\\\]', 'by_severity', 'by_type', 'connection_string', 'cp1252', 'dist[/\\\\]', 'files_with_secrets', 'generic_secret', 'jwt_token', 'latin-1', 'node_modules[/\\\\]', 'private_key', 'r', 'rb', 'total_findings', 'utf-8', 'venv[/\\\\]']

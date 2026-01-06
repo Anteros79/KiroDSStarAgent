@@ -136,7 +136,12 @@ class OrchestratorAgent:
         logger.info(f"Available specialists: {list(specialists.keys())}")
 
     
-    def process(self, query: str, context: Optional[Dict[str, Any]] = None) -> AgentResponse:
+    def process(
+        self, 
+        query: str, 
+        context: Optional[Dict[str, Any]] = None,
+        stream_handler: Optional[InvestigationStreamHandler] = None
+    ) -> AgentResponse:
         """Process a user query through the DS-Star system.
         
         This is the main entry point for query processing. It handles routing,
@@ -145,15 +150,24 @@ class OrchestratorAgent:
         Args:
             query: The user's natural language query
             context: Optional additional context (e.g., output_dir for charts)
+            stream_handler: Optional request-scoped stream handler. If provided,
+                           this handler is used instead of the instance attribute.
+                           This enables request-scoped streaming for concurrent users.
+                           Requirements: 2.1, 2.2
         
         Returns:
             AgentResponse containing routing info, specialist responses, and synthesis
         """
         start_time = time.time()
         
+        # Use passed handler if provided, otherwise fall back to instance attribute
+        # This enables request-scoped handlers for concurrent WebSocket connections
+        # Requirements: 2.1, 2.2
+        handler = stream_handler if stream_handler is not None else self.stream_handler
+        
         try:
             # Notify stream handler
-            self.stream_handler.on_agent_start("Orchestrator", query)
+            handler.on_agent_start("Orchestrator", query)
             
             # Step 1: Route the query to determine which specialists to invoke
             routing = self._route_query(query)
@@ -175,7 +189,7 @@ class OrchestratorAgent:
                 
                 # Invoke specialist
                 try:
-                    self.stream_handler.on_routing_decision(
+                    handler.on_routing_decision(
                         specialist_name,
                         f"Routing to {specialist_name} for domain expertise"
                     )
@@ -183,7 +197,7 @@ class OrchestratorAgent:
                     specialist_func = self.specialists[specialist_name]
                     
                     # Call specialist (they return JSON strings)
-                    self.stream_handler.on_tool_start(specialist_name, {"query": query})
+                    handler.on_tool_start(specialist_name, {"query": query})
                     
                     response_json = specialist_func(query, specialist_context)
                     
@@ -207,11 +221,11 @@ class OrchestratorAgent:
                     
                     specialist_responses.append(specialist_response)
                     
-                    self.stream_handler.on_tool_end(specialist_name, specialist_response.response[:100])
+                    handler.on_tool_end(specialist_name, specialist_response.response[:100])
                     
                 except Exception as e:
                     logger.error(f"Error invoking {specialist_name}: {e}", exc_info=True)
-                    self.stream_handler.on_error(e, f"specialist_{specialist_name}")
+                    handler.on_error(e, f"specialist_{specialist_name}")
                     
                     # Create error response
                     error_response = SpecialistResponse(
@@ -246,7 +260,7 @@ class OrchestratorAgent:
             self._update_history(query, synthesized_response)
             
             # Notify stream handler
-            self.stream_handler.on_agent_end("Orchestrator", synthesized_response[:150])
+            handler.on_agent_end("Orchestrator", synthesized_response[:150])
             
             logger.info(f"Query processed in {total_time_ms}ms")
             
@@ -254,7 +268,7 @@ class OrchestratorAgent:
         
         except Exception as e:
             logger.error(f"Error in orchestrator: {e}", exc_info=True)
-            self.stream_handler.on_error(e, "orchestrator")
+            handler.on_error(e, "orchestrator")
             
             # Return error response
             total_time_ms = int((time.time() - start_time) * 1000)

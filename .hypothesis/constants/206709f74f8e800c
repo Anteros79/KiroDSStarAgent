@@ -1,0 +1,4 @@
+# file: C:\DevProjects\KiroDSStarAgent\KiroDSStarAgent\src\data\airline_data.py
+# hypothesis_version: 6.148.7
+
+['-', 'actual_departure', 'airline', 'airlines', 'airports', 'average delay', 'avg_delay_minutes', 'avg_load_factor', 'bool', 'cancellation rate', 'cancellation_rate', 'cancelled', 'cancelled_flights', 'cancelled_rate', 'count', 'date', 'date_range', 'delay cause', 'delay_cause', 'delay_minutes', 'delayed_flights', 'delayed_rate', 'destination', 'end', 'flight_id', 'float', 'float64', 'int', 'int64', 'load factor', 'load_factor', 'max', 'mean', 'min', 'object', 'on-time performance', 'on_time', 'origin', 'otp', 'otp_rate', 'overview', 'rate', 'route', 'scheduled_departure', 'start', 'sum', 'summary', 'total', 'total_flights', 'turnaround_minutes']

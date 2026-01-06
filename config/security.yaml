@@ -1,0 +1,269 @@
+# DS-Star Security Configuration Template
+# =========================================
+# This file documents all security configuration options for the DS-Star
+# Multi-Agent System. Copy this file and customize for your environment.
+#
+# Configuration Precedence: Environment Variables > Config File > Defaults
+#
+# Requirements: 6.1, 6.4, 8.5, 9.5
+
+# =============================================================================
+# GENERAL SECURITY SETTINGS
+# =============================================================================
+
+security:
+  # Open Access Mode (default: true)
+  # When enabled, all authenticated users have full access to all data.
+  # Row-level security filtering is bypassed for performance.
+  # Set to false to enable row-level security restrictions.
+  # Environment variable: DS_STAR_OPEN_ACCESS_MODE
+  open_access_mode: true
+
+  # Session Time-To-Live in hours (default: 24)
+  # Sessions expire after this duration and require re-authentication.
+  # Environment variable: DS_STAR_SESSION_TTL_HOURS
+  session_ttl_hours: 24
+
+  # Identity Provider (default: "local")
+  # Options: "local", "azure_ad", "aws_iam"
+  # - local: Demo/development provider with predefined identities
+  # - azure_ad: Azure Active Directory integration (enterprise SSO)
+  # - aws_iam: AWS IAM integration (AWS-native authentication)
+  # Environment variable: DS_STAR_IDENTITY_PROVIDER
+  identity_provider: local
+
+  # Enable Audit Logging (default: true)
+  # When enabled, all access decisions are logged for compliance and debugging.
+  # Logs include: user_id, session_id, entity_type, decision, timestamp
+  # Environment variable: DS_STAR_ENABLE_AUDIT_LOGGING
+  enable_audit_logging: true
+
+
+# =============================================================================
+# AZURE AD CONFIGURATION (for azure_ad identity provider)
+# =============================================================================
+# To enable Azure AD integration:
+# 1. Register an application in Azure AD
+# 2. Configure OIDC/OAuth2 endpoints
+# 3. Set identity_provider to "azure_ad"
+# 4. Configure the settings below
+
+azure_ad:
+  # Azure AD Tenant ID
+  # Your Azure AD directory (tenant) ID
+  # Environment variable: AZURE_AD_TENANT_ID
+  tenant_id: "${AZURE_AD_TENANT_ID}"
+
+  # Azure AD Client ID
+  # Application (client) ID from your app registration
+  # Environment variable: AZURE_AD_CLIENT_ID
+  client_id: "${AZURE_AD_CLIENT_ID}"
+
+  # Azure AD Client Secret
+  # Client secret from your app registration
+  # SECURITY: Store this in environment variables, not in config files!
+  # Environment variable: AZURE_AD_CLIENT_SECRET
+  client_secret: "${AZURE_AD_CLIENT_SECRET}"
+
+  # Azure AD Authority URL
+  # Login authority URL for your tenant
+  # Default: https://login.microsoftonline.com/{tenant_id}
+  authority: "https://login.microsoftonline.com/${AZURE_AD_TENANT_ID}"
+
+  # Azure AD Group-to-Permission Mapping
+  # Maps Azure AD groups to DS-Star permission policies
+  group_mappings:
+    # Full company-wide access
+    - group: "DS-Star-Admins"
+      permission_policy: "full_access"
+      data_scope: "company"
+
+    # Regional data access
+    - group: "DS-Star-RegionalManagers"
+      permission_policy: "regional_access"
+      data_scope: "region"
+
+    # Station-level data access
+    - group: "DS-Star-StationManagers"
+      permission_policy: "station_access"
+      data_scope: "station"
+
+    # Read-only station access
+    - group: "DS-Star-Analysts"
+      permission_policy: "read_only"
+      data_scope: "station"
+
+  # Azure AD Claim Mappings
+  # Maps Azure AD claims to DS-Star user attributes
+  claim_mappings:
+    # User's station assignment (custom claim)
+    station_claim: "extension_Station"
+    # User's region assignment (custom claim)
+    region_claim: "extension_Region"
+    # User's role (from groups or custom claim)
+    role_claim: "roles"
+
+
+# =============================================================================
+# AWS IAM CONFIGURATION (for aws_iam identity provider)
+# =============================================================================
+# To enable AWS IAM integration:
+# 1. Create IAM roles with appropriate policies
+# 2. Configure Cognito identity pool (optional)
+# 3. Set identity_provider to "aws_iam"
+# 4. Configure the settings below
+
+aws_iam:
+  # AWS Region
+  # AWS region for IAM and STS operations
+  # Environment variable: AWS_REGION
+  region: "${AWS_REGION}"
+
+  # AWS Role ARN for Validation
+  # IAM role ARN used for validating STS tokens
+  # Environment variable: AWS_ROLE_ARN
+  role_arn: "${AWS_ROLE_ARN}"
+
+  # AWS Cognito Identity Pool ID (optional)
+  # If using Cognito for federated identities
+  # Environment variable: AWS_COGNITO_IDENTITY_POOL_ID
+  identity_pool_id: "${AWS_COGNITO_IDENTITY_POOL_ID}"
+
+  # AWS IAM Role-to-Permission Mapping
+  # Maps IAM roles to DS-Star permission policies
+  role_mappings:
+    # Full company-wide access
+    - role: "DSStarAdmin"
+      permission_policy: "full_access"
+      data_scope: "company"
+
+    # Regional data access
+    - role: "DSStarRegionalManager"
+      permission_policy: "regional_access"
+      data_scope: "region"
+
+    # Station-level data access
+    - role: "DSStarStationManager"
+      permission_policy: "station_access"
+      data_scope: "station"
+
+    # Read-only station access
+    - role: "DSStarAnalyst"
+      permission_policy: "read_only"
+      data_scope: "station"
+
+  # AWS IAM Tag Mappings
+  # Maps IAM resource tags to DS-Star user attributes
+  tag_mappings:
+    # User's station assignment (from IAM tag)
+    station_tag: "ds-star:station"
+    # User's region assignment (from IAM tag)
+    region_tag: "ds-star:region"
+
+
+# =============================================================================
+# LOCAL/DEMO PROVIDER CONFIGURATION (for local identity provider)
+# =============================================================================
+# The local provider is used for development and testing.
+# It provides predefined demo identities without external authentication.
+
+local:
+  # Demo Identities
+  # Predefined users for development and testing
+  demo_identities:
+    - id: "demo_admin"
+      name: "Demo Admin"
+      email: "admin@demo.local"
+      role: "admin"
+      station: null
+      region: null
+
+    - id: "demo_regional_manager"
+      name: "Regional Manager"
+      email: "regional@demo.local"
+      role: "regional_manager"
+      station: null
+      region: "WEST"
+
+    - id: "demo_station_manager"
+      name: "Station Manager"
+      email: "station@demo.local"
+      role: "station_manager"
+      station: "LAX"
+      region: "WEST"
+
+    - id: "demo_analyst"
+      name: "Analyst"
+      email: "analyst@demo.local"
+      role: "analyst"
+      station: "LAX"
+      region: "WEST"
+
+# =============================================================================
+# PERMISSION POLICIES
+# =============================================================================
+# Define custom permission policies for row-level security.
+# These policies control what data users can access based on their scope.
+
+permission_policies:
+  # Full access - company-wide visibility
+  full_access:
+    description: "Full access to all data across the company"
+    allowed_scopes:
+      - company
+      - region
+      - station
+    can_create: true
+    can_update: true
+    can_delete: true
+
+  # Regional access - region-level visibility
+  regional_access:
+    description: "Access to data within assigned region"
+    allowed_scopes:
+      - region
+      - station
+    can_create: true
+    can_update: true
+    can_delete: false
+
+  # Station access - station-level visibility
+  station_access:
+    description: "Access to data within assigned station"
+    allowed_scopes:
+      - station
+    can_create: true
+    can_update: true
+    can_delete: false
+
+  # Read-only access - station-level visibility, no modifications
+  read_only:
+    description: "Read-only access to station data"
+    allowed_scopes:
+      - station
+    can_create: false
+    can_update: false
+    can_delete: false
+
+# =============================================================================
+# MIGRATION NOTES
+# =============================================================================
+# 
+# Migrating from Local to Azure AD:
+# 1. Register application in Azure AD portal
+# 2. Configure redirect URIs for your deployment
+# 3. Create Azure AD groups matching group_mappings above
+# 4. Add custom claims for station/region if needed
+# 5. Update this config: set identity_provider to "azure_ad"
+# 6. Set environment variables for tenant_id, client_id, client_secret
+# 7. Test with pilot users before full rollout
+#
+# Migrating from Local to AWS IAM:
+# 1. Create IAM roles matching role_mappings above
+# 2. Configure Cognito identity pool (optional)
+# 3. Add resource tags for station/region assignments
+# 4. Update this config: set identity_provider to "aws_iam"
+# 5. Set environment variables for region, role_arn
+# 6. Test with pilot users before full rollout
+#
+# See docs/SECURITY_MIGRATION.md for detailed migration guides.

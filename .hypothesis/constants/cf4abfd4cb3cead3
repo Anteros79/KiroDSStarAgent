@@ -1,0 +1,4 @@
+# file: C:\DevProjects\KiroDSStarAgent\KiroDSStarAgent\src\models.py
+# hypothesis_version: 6.148.7
+
+['AgentResponse', 'agent_name', 'charts', 'duration_ms', 'execution_time_ms', 'inputs', 'output', 'query', 'response', 'routing', 'specialist_responses', 'synthesized_response', 'tool_calls', 'tool_name', 'total_time_ms']
